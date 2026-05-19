@@ -3,11 +3,15 @@ package provider
 
 import (
 	"context"
+	"net/url"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/langri-sha/aperature/internal/aperture"
@@ -40,7 +44,12 @@ func (p *apertureProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
 				Required:    true,
-				Description: "Full base URL of the Aperture admin API including the /aperture path prefix, e.g. http://ai.<tailnet>.ts.net/aperture.",
+				Description: "Full base URL of the Aperture admin API including the /aperture path prefix, e.g. https://ai.<tailnet>.ts.net/aperture.",
+				Validators: []validator.String{
+					endpointURLValidator{},
+					endpointProtocolValidator{},
+					endpointPathValidator{},
+				},
 			},
 		},
 	}
@@ -70,4 +79,96 @@ func (p *apertureProvider) Resources(_ context.Context) []func() resource.Resour
 
 func (p *apertureProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return nil
+}
+
+// endpointURLValidator validates that the endpoint is a valid URL.
+type endpointURLValidator struct{}
+
+func (v endpointURLValidator) Description(ctx context.Context) string {
+	return "endpoint must be a valid URL"
+}
+
+func (v endpointURLValidator) MarkdownDescription(ctx context.Context) string {
+	return "endpoint must be a valid URL"
+}
+
+func (v endpointURLValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	value := req.ConfigValue.ValueString()
+	_, err := url.Parse(value)
+	if err != nil {
+		resp.Diagnostics.Append(diag.NewAttributeErrorDiagnostic(
+			req.Path,
+			"Invalid Endpoint URL",
+			"endpoint must be a valid URL",
+		))
+	}
+}
+
+// endpointProtocolValidator validates that the endpoint uses https:// protocol.
+type endpointProtocolValidator struct{}
+
+func (v endpointProtocolValidator) Description(ctx context.Context) string {
+	return "endpoint must use https:// protocol"
+}
+
+func (v endpointProtocolValidator) MarkdownDescription(ctx context.Context) string {
+	return "endpoint must use https:// protocol"
+}
+
+func (v endpointProtocolValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	value := req.ConfigValue.ValueString()
+	parsed, err := url.Parse(value)
+	if err != nil {
+		// Let the URL validator handle this
+		return
+	}
+
+	if parsed.Scheme != "https" {
+		resp.Diagnostics.Append(diag.NewAttributeErrorDiagnostic(
+			req.Path,
+			"Invalid Endpoint Protocol",
+			"endpoint must use https:// protocol, not "+parsed.Scheme+"://",
+		))
+	}
+}
+
+// endpointPathValidator validates that the endpoint path ends with /aperture.
+type endpointPathValidator struct{}
+
+func (v endpointPathValidator) Description(ctx context.Context) string {
+	return "endpoint path must end with /aperture"
+}
+
+func (v endpointPathValidator) MarkdownDescription(ctx context.Context) string {
+	return "endpoint path must end with /aperture"
+}
+
+func (v endpointPathValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	if req.ConfigValue.IsNull() || req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	value := req.ConfigValue.ValueString()
+	parsed, err := url.Parse(value)
+	if err != nil {
+		// Let the URL validator handle this
+		return
+	}
+
+	path := strings.TrimRight(parsed.Path, "/")
+	if !strings.HasSuffix(path, "/aperture") {
+		resp.Diagnostics.Append(diag.NewAttributeErrorDiagnostic(
+			req.Path,
+			"Invalid Endpoint Path",
+			"endpoint path must end with /aperture, got "+parsed.Path,
+		))
+	}
 }

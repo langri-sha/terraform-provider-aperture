@@ -14,6 +14,7 @@ package aperture
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -55,7 +56,17 @@ type Client struct {
 func NewClient(cfg ClientConfig) *Client {
 	httpClient := cfg.HTTPClient
 	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 30 * time.Second}
+		httpClient = &http.Client{
+			Timeout: 30 * time.Second,
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					MinVersion: tls.VersionTLS13,
+				},
+			},
+		}
 	}
 	return &Client{cfg: cfg, http: httpClient}
 }
@@ -92,7 +103,8 @@ func (c *Client) GetConfig(ctx context.Context) (config string, etag string, err
 		return "", "", c.problemError(resp)
 	}
 	var env configEnvelope
-	if err := json.NewDecoder(resp.Body).Decode(&env); err != nil {
+	limitedBody := io.LimitReader(resp.Body, 10*1024*1024)
+	if err := json.NewDecoder(limitedBody).Decode(&env); err != nil {
 		return "", "", fmt.Errorf("aperture: decode get-config: %w", err)
 	}
 	return env.Config, resp.Header.Get("ETag"), nil
@@ -123,7 +135,8 @@ func (c *Client) SetConfig(ctx context.Context, config, ifMatch string) (saved s
 	switch resp.StatusCode {
 	case http.StatusOK:
 		var env configEnvelope
-		if err := json.NewDecoder(resp.Body).Decode(&env); err != nil {
+		limitedBody := io.LimitReader(resp.Body, 10*1024*1024)
+		if err := json.NewDecoder(limitedBody).Decode(&env); err != nil {
 			return "", "", fmt.Errorf("aperture: decode set-config: %w", err)
 		}
 		return env.Config, resp.Header.Get("ETag"), nil
@@ -157,7 +170,8 @@ func (c *Client) ValidateConfig(ctx context.Context, config string) (*Validation
 		return nil, c.problemError(resp)
 	}
 	var vr ValidationResult
-	if err := json.NewDecoder(resp.Body).Decode(&vr); err != nil {
+	limitedBody := io.LimitReader(resp.Body, 10*1024*1024)
+	if err := json.NewDecoder(limitedBody).Decode(&vr); err != nil {
 		return nil, fmt.Errorf("aperture: decode validate-config: %w", err)
 	}
 	return &vr, nil
