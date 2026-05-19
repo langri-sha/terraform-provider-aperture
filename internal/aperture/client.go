@@ -74,6 +74,13 @@ func NewClient(cfg ClientConfig) *Client {
 // Endpoint returns the configured endpoint, or "" if none was set.
 func (c *Client) Endpoint() string { return c.cfg.Endpoint }
 
+const maxResponseSize = 10 * 1024 * 1024 // 10MB limit on config responses
+
+func (c *Client) decodeLimitedJSON(body io.Reader, v interface{}) error {
+	limitedBody := io.LimitReader(body, maxResponseSize)
+	return json.NewDecoder(limitedBody).Decode(v)
+}
+
 // configEnvelope wraps a HuJSON config string in the {config: ...}
 // shape that GetConfig/SetConfig/ValidateConfig all use.
 type configEnvelope struct {
@@ -103,8 +110,7 @@ func (c *Client) GetConfig(ctx context.Context) (config string, etag string, err
 		return "", "", c.problemError(resp)
 	}
 	var env configEnvelope
-	limitedBody := io.LimitReader(resp.Body, 10*1024*1024)
-	if err := json.NewDecoder(limitedBody).Decode(&env); err != nil {
+	if err := c.decodeLimitedJSON(resp.Body, &env); err != nil {
 		return "", "", fmt.Errorf("aperture: decode get-config: %w", err)
 	}
 	return env.Config, resp.Header.Get("ETag"), nil
@@ -135,8 +141,7 @@ func (c *Client) SetConfig(ctx context.Context, config, ifMatch string) (saved s
 	switch resp.StatusCode {
 	case http.StatusOK:
 		var env configEnvelope
-		limitedBody := io.LimitReader(resp.Body, 10*1024*1024)
-		if err := json.NewDecoder(limitedBody).Decode(&env); err != nil {
+		if err := c.decodeLimitedJSON(resp.Body, &env); err != nil {
 			return "", "", fmt.Errorf("aperture: decode set-config: %w", err)
 		}
 		return env.Config, resp.Header.Get("ETag"), nil
@@ -170,8 +175,7 @@ func (c *Client) ValidateConfig(ctx context.Context, config string) (*Validation
 		return nil, c.problemError(resp)
 	}
 	var vr ValidationResult
-	limitedBody := io.LimitReader(resp.Body, 10*1024*1024)
-	if err := json.NewDecoder(limitedBody).Decode(&vr); err != nil {
+	if err := c.decodeLimitedJSON(resp.Body, &vr); err != nil {
 		return nil, fmt.Errorf("aperture: decode validate-config: %w", err)
 	}
 	return &vr, nil
@@ -225,6 +229,9 @@ func (c *Client) newRequest(ctx context.Context, method, path string, body io.Re
 // from an RFC 9457 Problem Details document, falling back to a plain
 // HTTP error when the body isn't problem+json.
 func (c *Client) problemError(resp *http.Response) error {
+	// Ignore read errors: if body read fails, raw will be empty and the fallback
+	// error message will be used. This is acceptable because we're already handling
+	// an HTTP error; trying to parse it is best-effort.
 	raw, _ := io.ReadAll(resp.Body)
 	var pd struct {
 		Title  string `json:"title"`

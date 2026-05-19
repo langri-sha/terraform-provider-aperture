@@ -12,6 +12,18 @@ import (
 	"testing"
 )
 
+// Shared test clients to avoid allocating new Transports for every test.
+var (
+	testClientTLS = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+	testClientPlain = &http.Client{}
+)
+
 // handleGetConfig processes GET /aperture/config requests
 func handleGetConfig(w http.ResponseWriter, r *http.Request, t *testing.T, cfg *testServerConfig) {
 	if cfg.RequestValidator != nil {
@@ -248,17 +260,11 @@ func newTestServer(t *testing.T, cfg *testServerConfig) *testServer {
 		url: srv.URL,
 	}
 
-	// Create an HTTP client that doesn't verify TLS (for testing)
+	// Use shared test client to avoid allocating new Transports per test.
 	if cfg.TLS {
-		ts.client = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-				},
-			},
-		}
+		ts.client = testClientTLS
 	} else {
-		ts.client = &http.Client{}
+		ts.client = testClientPlain
 	}
 
 	return ts

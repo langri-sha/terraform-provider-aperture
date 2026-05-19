@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -104,7 +105,7 @@ func TestEndpointPathValidator_RejectsMissingAperturePath(t *testing.T) {
 			// Verify error message includes the actual path
 			if len(resp.Diagnostics) > 0 {
 				detail := resp.Diagnostics[0].Detail()
-				if !contains(detail, "aperture") {
+				if !strings.Contains(detail, "aperture") {
 					t.Errorf("error detail should mention 'aperture': %q", detail)
 				}
 			}
@@ -306,19 +307,4 @@ func TestCombinedValidation_Valid(t *testing.T) {
 			t.Errorf("%T should accept %q: %v", v, endpoint, resp.Diagnostics)
 		}
 	}
-}
-
-// Helper function to check if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) > 0 && len(substr) > 0 && (s == substr || len(s) >= len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr || indexStr(s, substr) >= 0))
-}
-
-// indexStr is a simple substring index function
-func indexStr(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }

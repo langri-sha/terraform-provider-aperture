@@ -45,6 +45,7 @@ func (p *apertureProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 			"endpoint": schema.StringAttribute{
 				Required:    true,
 				Description: "Full base URL of the Aperture admin API including the /aperture path prefix, e.g. https://ai.<tailnet>.ts.net/aperture.",
+				// Validators run in order: URL format check must pass before protocol and path checks.
 				Validators: []validator.String{
 					endpointURLValidator{},
 					endpointProtocolValidator{},
