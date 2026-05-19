@@ -56,11 +56,11 @@ resource "tailscale_acl" "policy" {
   overwrite_existing_content = true
 }
 
-# 3. Aperture provider — points at the gateway's admin API. The base
-#    URL convention is http://ai.<tailnet>/aperture; auth is by
-#    Tailscale identity, no api_key attribute.
+# 3. Aperture provider — points at the gateway's admin API. The endpoint
+#    must use HTTPS; auth is by Tailscale identity, no api_key attribute.
+#    The /aperture path suffix is mandatory for the provider's internal routing.
 provider "aperature" {
-  endpoint = "http://ai.${var.tailnet}/aperture"
+  endpoint = "https://ai.${var.tailnet}/aperture"
 }
 
 # 4. The Aperture configuration document itself. One singleton, one

@@ -1,6 +1,9 @@
 # aperature_config is a singleton — one document per gateway. Multiple
 # resource instances pointing at the same provider endpoint will stomp
 # each other.
+#
+# Note: The provider endpoint must use HTTPS and include the /aperture path suffix.
+# Example: endpoint = "https://ai.your-tailnet.ts.net/aperture"
 
 resource "aperature_config" "main" {
   providers = {

@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-05-19
+
+### Breaking Changes
+
+- The provider now requires HTTPS for all Aperture endpoints. HTTP endpoints are no longer supported. Update your endpoint configuration from `http://` to `https://`.
+
+### Fixed
+
+- Fixed HTTP redirect following vulnerability in HTTP client
+- Fixed missing HTTPS/TLS enforcement
+- Fixed missing endpoint URL validation
+- Fixed unbounded JSON decoder responses
+
+### Upgrade Notes
+
+Change your provider configuration from:
+```hcl
+endpoint = "http://ai.${var.tailnet}/aperture"
+```
+
+to:
+```hcl
+endpoint = "https://ai.${var.tailnet}/aperture"
+```
+
 ## [0.2.0] — 2026-05-08
 
 ### Changed

@@ -40,7 +40,7 @@ terraform {
 }
 
 provider "aperature" {
-  endpoint = "http://ai.${var.tailnet}/aperture"
+  endpoint = "https://ai.${var.tailnet}/aperture"
   # Auth is by Tailscale identity at the network layer — the runner
   # must be on the tailnet with the admin role granted. No API key.
 }
@@ -65,6 +65,23 @@ resource "aperature_config" "main" {
 
 See [`examples/quickstart/`](./examples/quickstart) for a complete
 tailnet + Aperture setup including the tailscale ACL.
+
+### Endpoint Configuration
+
+The provider requires an HTTPS endpoint to communicate with Aperture's admin API.
+
+**Format:** `https://host/aperture`
+
+- **HTTPS is required** — HTTP endpoints are not supported.
+- **The `/aperture` path suffix is mandatory** — this routes to the admin API endpoints (`GET /aperture/config`, `PUT /aperture/config`, `POST /aperture/config:validate`).
+- **Authentication** is handled via Tailscale identity at the network layer. No API key is needed. The Terraform runner must be on the tailnet with the appropriate admin role granted.
+
+**Example:**
+```hcl
+provider "aperature" {
+  endpoint = "https://ai.your-tailnet.ts.net/aperture"
+}
+```
 
 ### Importing an existing live config
 
