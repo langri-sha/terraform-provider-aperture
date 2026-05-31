@@ -1,27 +1,22 @@
-# terraform-provider-aperature
+# terraform-provider-aperture
 
-[![Test](https://github.com/langri-sha/terraform-provider-aperature/actions/workflows/test.yml/badge.svg)](https://github.com/langri-sha/terraform-provider-aperature/actions/workflows/test.yml)
+[![Test](https://github.com/langri-sha/terraform-provider-aperture/actions/workflows/test.yml/badge.svg)](https://github.com/langri-sha/terraform-provider-aperture/actions/workflows/test.yml)
 
 A Terraform provider for [Aperture by Tailscale](https://tailscale.com/docs/aperture),
 the AI gateway that brokers LLM requests for a tailnet.
-
-> Repo path note: this repo is spelled `aperature` because that's the
-> path Filip's workspace uses for it. The upstream product is canonically
-> spelled **Aperture**. A rename to `terraform-provider-aperture` is on
-> the table for v1.
 
 ## Status
 
 Pre-1.0 but functional. The provider talks to Aperture's documented
 admin API (`GET /aperture/config`, `PUT /aperture/config`,
 `POST /aperture/config:validate`) and exposes a single
-`aperature_config` resource.
+`aperture_config` resource.
 
 ## Surface
 
 | Type | Name | Purpose |
 |---|---|---|
-| Resource | `aperature_config` | The singleton configuration document. CRUD via the admin API; `terraform import aperature_config.main default` works. |
+| Resource | `aperture_config` | The singleton configuration document. CRUD via the admin API; `terraform import aperture_config.main default` works. |
 
 The HCL schema mirrors Aperture's HuJSON keys verbatim — `providers`,
 `grants`, `quotas`, `hooks`, `auto_cost_basis`. See
@@ -32,20 +27,20 @@ The HCL schema mirrors Aperture's HuJSON keys verbatim — `providers`,
 ```hcl
 terraform {
   required_providers {
-    aperature = {
-      source  = "langri-sha/aperature"
-      version = "~> 0.2"
+    aperture = {
+      source  = "langri-sha/aperture"
+      version = "~> 0.3"
     }
   }
 }
 
-provider "aperature" {
+provider "aperture" {
   endpoint = "https://ai.${var.tailnet}/aperture"
   # Auth is by Tailscale identity at the network layer — the runner
   # must be on the tailnet with the admin role granted. No API key.
 }
 
-resource "aperature_config" "main" {
+resource "aperture_config" "main" {
   providers = {
     openai = {
       baseurl = "https://api.openai.com/v1"
@@ -78,7 +73,7 @@ The provider requires an HTTPS endpoint to communicate with Aperture's admin API
 
 **Example:**
 ```hcl
-provider "aperature" {
+provider "aperture" {
   endpoint = "https://ai.your-tailnet.ts.net/aperture"
 }
 ```
@@ -86,8 +81,8 @@ provider "aperature" {
 ### Importing an existing live config
 
 ```sh
-echo 'resource "aperature_config" "main" {}' > main.tf
-terraform import aperature_config.main default
+echo 'resource "aperture_config" "main" {}' > main.tf
+terraform import aperture_config.main default
 ```
 
 The post-import Read pulls the entire HuJSON document from the
@@ -98,7 +93,7 @@ pointing at your secret store before the next `plan`.
 
 ```
 .
-├── cmd/terraform-provider-aperature/   # provider entrypoint (main.go)
+├── cmd/terraform-provider-aperture/   # provider entrypoint (main.go)
 ├── internal/
 │   ├── aperture/                       # HTTP client + typed wire structs
 │   └── provider/                       # plugin-framework provider + resources
@@ -133,13 +128,13 @@ op run --env-file=.tfc-release.env -- scripts/tfc-release.sh 0.2.0
 
 `scripts/tfc-release.sh` builds zips for the popular platforms,
 generates `SHA256SUMS`, signs it with the configured GPG key, and
-uploads everything to `app.terraform.io/<org>/aperature/<version>`.
+uploads everything to `app.terraform.io/<org>/aperture/<version>`.
 After it succeeds, consumers pin via:
 
 ```hcl
-aperature = {
-  source  = "app.terraform.io/<org>/aperature"
-  version = "~> 0.2"
+aperture = {
+  source  = "app.terraform.io/<org>/aperture"
+  version = "~> 0.3"
 }
 ```
 

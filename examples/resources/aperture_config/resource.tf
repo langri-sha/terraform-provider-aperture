@@ -1,11 +1,11 @@
-# aperature_config is a singleton — one document per gateway. Multiple
+# aperture_config is a singleton — one document per gateway. Multiple
 # resource instances pointing at the same provider endpoint will stomp
 # each other.
 #
 # Note: The provider endpoint must use HTTPS and include the /aperture path suffix.
 # Example: endpoint = "https://ai.your-tailnet.ts.net/aperture"
 
-resource "aperature_config" "main" {
+resource "aperture_config" "main" {
   providers = {
     openai = {
       baseurl = "https://api.openai.com/v1"
@@ -48,9 +48,9 @@ resource "aperature_config" "main" {
 
 # Importing the existing live config:
 #
-#   terraform import aperature_config.main default
+#   terraform import aperture_config.main default
 #
 # The id is always "default" — Aperture has exactly one config per
 # gateway. The post-import Read pulls everything from the API; you
-# only need a stub `resource "aperature_config" "main" {}` block in
+# only need a stub `resource "aperture_config" "main" {}` block in
 # your HCL before running import.

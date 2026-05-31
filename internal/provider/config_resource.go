@@ -13,10 +13,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/langri-sha/aperature/internal/aperture"
+	"github.com/langri-sha/aperture/internal/aperture"
 )
 
-// aperature_config is the singleton resource representing the
+// aperture_config is the singleton resource representing the
 // entire Aperture configuration document. There is exactly one of
 // these per gateway; declaring multiple resource instances pointed
 // at the same provider endpoint will stomp each other.
@@ -244,7 +244,7 @@ func (r *configResource) Delete(_ context.Context, _ resource.DeleteRequest, res
 	// resource from terraform shouldn't wipe a working gateway. Drop
 	// the state row and warn the operator.
 	resp.Diagnostics.AddWarning(
-		"aperature_config destroy is a state-only operation",
+		"aperture_config destroy is a state-only operation",
 		"Aperture has no admin endpoint to delete a configuration; the current document remains live on the gateway. To wipe it, PUT an empty/minimal config manually via aperture-cli or curl.",
 	)
 }

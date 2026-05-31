@@ -11,9 +11,9 @@ terraform {
       source  = "tailscale/tailscale"
       version = "~> 0.28"
     }
-    aperature = {
-      source  = "langri-sha/aperature"
-      version = "~> 0.2"
+    aperture = {
+      source  = "langri-sha/aperture"
+      version = "~> 0.3"
     }
   }
 }
@@ -59,13 +59,13 @@ resource "tailscale_acl" "policy" {
 # 3. Aperture provider — points at the gateway's admin API. The endpoint
 #    must use HTTPS; auth is by Tailscale identity, no api_key attribute.
 #    The /aperture path suffix is mandatory for the provider's internal routing.
-provider "aperature" {
+provider "aperture" {
   endpoint = "https://ai.${var.tailnet}/aperture"
 }
 
 # 4. The Aperture configuration document itself. One singleton, one
 #    OpenAI provider, one grant for the developers group.
-resource "aperature_config" "main" {
+resource "aperture_config" "main" {
   providers = {
     openai = {
       baseurl = "https://api.openai.com/v1"

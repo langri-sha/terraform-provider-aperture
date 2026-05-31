@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Build, sign, and upload a release of terraform-provider-aperature to a
+# Build, sign, and upload a release of terraform-provider-aperture to a
 # Terraform Cloud private provider registry.
 #
 # Required env vars (recommended to inject via `op run --env-file=...`):
@@ -15,7 +15,7 @@
 #
 # Optional:
 #
-#   PROVIDER_NAME   Defaults to "aperature".
+#   PROVIDER_NAME   Defaults to "aperture".
 #   VERSION         Defaults to the current `git describe --tags`. Must be
 #                   semver without the leading "v" by the time it reaches
 #                   TFC (TFC strips it but emits a warning). We strip here.
@@ -30,7 +30,7 @@ set -euo pipefail
 
 # --- Config -----------------------------------------------------------------
 
-PROVIDER_NAME=${PROVIDER_NAME:-aperature}
+PROVIDER_NAME=${PROVIDER_NAME:-aperture}
 TFC_ORG=${TFC_ORG:?TFC_ORG is required (e.g. doc-ba)}
 TFC_TOKEN=${TFC_TOKEN:?TFC_TOKEN is required}
 GPG_KEY_ID=${GPG_KEY_ID:?GPG_KEY_ID is required (40-char fingerprint)}
@@ -87,7 +87,7 @@ for platform in $PLATFORMS; do
   log "  build $goos/$goarch"
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
     go build -ldflags "-s -w -X main.version=$VERSION -X main.commit=$(git rev-parse --short HEAD)" \
-    -o "$out" ./cmd/terraform-provider-aperature
+    -o "$out" ./cmd/terraform-provider-aperture
 
   zipname="terraform-provider-${PROVIDER_NAME}_${VERSION}_${goos}_${goarch}.zip"
   (cd "$DIST" && zip -q "$zipname" "$(basename "$out")" && rm -f "$(basename "$out")")

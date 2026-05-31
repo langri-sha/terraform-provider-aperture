@@ -1,4 +1,4 @@
-// Package provider implements the terraform-provider-aperature plugin.
+// Package provider implements the terraform-provider-aperture plugin.
 package provider
 
 import (
@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/langri-sha/aperature/internal/aperture"
+	"github.com/langri-sha/aperture/internal/aperture"
 )
 
 // New returns a providerserver factory.
@@ -34,7 +34,7 @@ type providerModel struct {
 }
 
 func (p *apertureProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "aperature"
+	resp.TypeName = "aperture"
 	resp.Version = p.version
 }
 
@@ -65,7 +65,7 @@ func (p *apertureProvider) Configure(ctx context.Context, req provider.Configure
 
 	client := aperture.NewClient(aperture.ClientConfig{
 		Endpoint:  data.Endpoint.ValueString(),
-		UserAgent: "terraform-provider-aperature/" + p.version,
+		UserAgent: "terraform-provider-aperture/" + p.version,
 	})
 
 	resp.DataSourceData = client

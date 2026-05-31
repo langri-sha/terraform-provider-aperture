@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/langri-sha/aperature/internal/aperture"
+	"github.com/langri-sha/aperture/internal/aperture"
 )
 
 func TestToAPIConfig_OmitsAbsentFields(t *testing.T) {

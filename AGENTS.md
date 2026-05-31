@@ -29,7 +29,7 @@ with the admin role grant either in Aperture's own grants[] or in
 the tailnet ACL.
 
 The configuration document is a singleton: one HuJSON document per
-gateway. Modeled in HCL as `resource "aperature_config" "main"`.
+gateway. Modeled in HCL as `resource "aperture_config" "main"`.
 
 Top-level keys (mirror upstream verbatim — do not rename):
 
@@ -50,7 +50,7 @@ Don't invent fields. If upstream doesn't document it, leave it out.
 ## Layout
 
 ```
-cmd/terraform-provider-aperature/   # main.go — providerserver entrypoint
+cmd/terraform-provider-aperture/   # main.go — providerserver entrypoint
 internal/aperture/                  # HTTP client (config.go: wire types; client.go: GET/PUT/validate)
 internal/provider/                  # plugin-framework provider + resources
 examples/                           # terraform-plugin-docs example layout + quickstart
@@ -114,7 +114,7 @@ in `scripts/tfc-release.sh` — set in `.tfc-release.env` (gitignored):
   registry-providers write permission.
 - `GPG_KEY_ID` — 40-char fingerprint of the signing key. The secret
   key must be importable locally; bootstrap from 1Password:
-  `op read 'op://Rashadnyk/Aperature TFC Provider Signing Key/private_key' | gpg --import`.
+  `op read 'op://Rashadnyk/Aperture TFC Provider Signing Key/private_key' | gpg --import`.
 
 Provider uses no encryption subkey by design (sign-only). Don't
 recreate it — the fingerprint is referenced in `versions.tf`

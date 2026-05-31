@@ -1,5 +1,5 @@
 # Build artifacts
-/terraform-provider-aperature
+/terraform-provider-aperture
 /dist/
 *.exe
 *.test

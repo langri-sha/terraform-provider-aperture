@@ -7,7 +7,7 @@ once docs generation is wired up.
 ```
 provider/                          provider block example -> docs/index.md
 resources/<name>/resource.tf       -> docs/resources/<name>.md
-quickstart/                        end-to-end tailscale + aperature setup
+quickstart/                        end-to-end tailscale + aperture setup
 ```
 
 ## Quickstart
@@ -15,14 +15,14 @@ quickstart/                        end-to-end tailscale + aperature setup
 [`quickstart/`](./quickstart) is the smallest correct configuration:
 a tailnet ACL declaring `tag:ai-aperture`, the Aperture provider
 pointed at `http://ai.<tailnet>/aperture`, and one
-`aperature_config` resource with a single LLM provider and a
+`aperture_config` resource with a single LLM provider and a
 developer grant. Read that first if you've never used the provider.
 
 ## Running against a local build
 
 The provider isn't on the public Terraform Registry. Two options:
 
-1. **TFC private provider.** `app.terraform.io/<org>/aperature` — see
+1. **TFC private provider.** `app.terraform.io/<org>/aperture` — see
    [`scripts/tfc-release.sh`](../scripts/tfc-release.sh).
 2. **Local `dev_overrides`.** Build the binary and point a
    `~/.terraformrc` at it:
@@ -30,13 +30,13 @@ The provider isn't on the public Terraform Registry. Two options:
    ```hcl
    provider_installation {
      dev_overrides {
-       "langri-sha/aperature" = "/path/to/aperature/dist"
+       "langri-sha/aperture" = "/path/to/aperture/dist"
      }
      direct {}
    }
    ```
 
-   Then `go build -o dist/terraform-provider-aperature ./cmd/terraform-provider-aperature`
+   Then `go build -o dist/terraform-provider-aperture ./cmd/terraform-provider-aperture`
    and run `terraform plan` from any of the example directories.
    Skip `terraform init` — dev overrides bypass the lock file.
 
@@ -45,10 +45,10 @@ The provider isn't on the public Terraform Registry. Two options:
 ```sh
 # Pre-create a stub block:
 cat > main.tf <<'EOF'
-resource "aperature_config" "main" {}
+resource "aperture_config" "main" {}
 EOF
 
-terraform import aperature_config.main default
+terraform import aperture_config.main default
 ```
 
 The post-import Read pulls the entire HuJSON document from the

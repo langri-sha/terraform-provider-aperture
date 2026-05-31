@@ -1,13 +1,13 @@
 terraform {
   required_providers {
-    aperature = {
-      source  = "langri-sha/aperature"
-      version = "~> 0.2"
+    aperture = {
+      source  = "langri-sha/aperture"
+      version = "~> 0.3"
     }
   }
 }
 
-provider "aperature" {
+provider "aperture" {
   # Full base URL of the Aperture admin API including the /aperture
   # path prefix. Auth is by Tailscale identity at the network layer,
   # so the caller must be on the tailnet with the admin role.

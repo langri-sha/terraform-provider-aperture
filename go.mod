@@ -1,4 +1,4 @@
-module github.com/langri-sha/aperature
+module github.com/langri-sha/aperture
 
 go 1.25.0
 

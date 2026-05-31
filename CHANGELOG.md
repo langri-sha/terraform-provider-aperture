@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-05-20
+
+### Breaking Changes
+
+- Renamed the provider from `aperature` to `aperture`, correcting a spelling
+  error. This changes the provider source address to `langri-sha/aperture`,
+  the resource type to `aperture_config`, and the Go module path to
+  `github.com/langri-sha/aperture`.
+
+### Upgrade Notes
+
+Update your `required_providers` source and resource types:
+```hcl
+terraform {
+  required_providers {
+    aperture = {
+      source  = "langri-sha/aperture"
+      version = "~> 0.3"
+    }
+  }
+}
+
+resource "aperture_config" "main" { # was: aperature_config
+  # ...
+}
+```
+
+State migration: rename the resource in state with
+`terraform state mv aperature_config.main aperture_config.main` (or remove and
+re-import via `terraform import aperture_config.main default`).
+
 ## [0.2.1] — 2026-05-19
 
 ### Breaking Changes
@@ -34,7 +65,7 @@ endpoint = "https://ai.${var.tailnet}/aperture"
 
 ### Changed
 
-- Rewrote provider as a singleton `aperature_config` resource that talks to
+- Rewrote provider as a singleton `aperture_config` resource that talks to
   the real Aperture admin API (`GET /aperture/config`, `PUT /aperture/config`,
   `POST /aperture/config:validate`). Prior data-source scaffolds removed.
 - Refreshed `examples/quickstart/` and `examples/resources/` for the v0.2
@@ -45,9 +76,9 @@ endpoint = "https://ai.${var.tailnet}/aperture"
 
 ### Added
 
-- Go module bootstrap (`github.com/langri-sha/aperature`).
+- Go module bootstrap (`github.com/langri-sha/aperture`).
 - Internal Aperture HTTP client and typed wire structs.
-- Provider entrypoint with `aperature_config` data source and resource
+- Provider entrypoint with `aperture_config` data source and resource
   scaffolds (terraform-plugin-framework).
 - CI: `go test -race`, `go vet`, `terraform fmt -check` via GitHub Actions.
 - `scripts/tfc-release.sh` for building and uploading to a TFC private

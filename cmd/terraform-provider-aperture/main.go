@@ -1,6 +1,6 @@
-// Command terraform-provider-aperature is the Terraform provider entrypoint
+// Command terraform-provider-aperture is the Terraform provider entrypoint
 // for Aperture by Tailscale. The actual provider lives in
-// github.com/langri-sha/aperature/internal/provider.
+// github.com/langri-sha/aperture/internal/provider.
 package main
 
 import (
@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 
-	"github.com/langri-sha/aperature/internal/provider"
+	"github.com/langri-sha/aperture/internal/provider"
 )
 
 // These are populated at build time via -ldflags by goreleaser.
@@ -25,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/langri-sha/aperature",
+		Address: "registry.terraform.io/langri-sha/aperture",
 		Debug:   debug,
 	}
 
