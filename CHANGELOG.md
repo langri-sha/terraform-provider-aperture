@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-06-03
+
+### Changed
+
+- Publishing moved to the public Terraform Registry (`langri-sha/aperture`),
+  built and signed by GoReleaser and GitHub Actions when a GitHub Release is
+  published. The Terraform Cloud private-registry release path
+  (`scripts/tfc-release.sh`) is removed.
+
+### Added
+
+- Generated provider documentation under `docs/` via terraform-plugin-docs
+  (`scripts/generate-docs.sh`).
+
 ## [0.3.0] — 2026-05-20
 
 ### Breaking Changes
