@@ -58,3 +58,33 @@ jobs:
 
       - name: Check formatting
         run: terraform fmt -check -recursive -diff examples
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.13.0
+          terraform_wrapper: false
+
+      - name: Regenerate docs
+        run: scripts/generate-docs.sh
+
+      # Fails when the schema or examples changed without re-running
+      # scripts/generate-docs.sh. Stage first so added or removed doc
+      # files are caught too, not only edits to existing ones.
+      - name: Verify docs are up to date
+        run: |
+          git add docs/
+          git diff --staged --exit-code -- docs/
