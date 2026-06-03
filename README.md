@@ -94,10 +94,6 @@ pointing at your secret store before the next `plan`.
 Bug reports and pull requests are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md)
 for the repository layout, local development, and the release process.
 
-## Changelog
-
-See [CHANGELOG.md](./CHANGELOG.md).
-
 ## License
 
 Apache 2.0. See [`LICENSE`](./LICENSE).
