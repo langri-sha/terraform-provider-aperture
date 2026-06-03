@@ -54,9 +54,10 @@ cmd/terraform-provider-aperture/   # main.go — providerserver entrypoint
 internal/aperture/                  # HTTP client (config.go: wire types; client.go: GET/PUT/validate)
 internal/provider/                  # plugin-framework provider + resources
 examples/                           # terraform-plugin-docs example layout + quickstart
-docs/                               # generated docs
-scripts/tfc-release.sh              # release pipeline for TFC private providers
-.github/workflows/                  # CI
+docs/                               # generated docs (scripts/generate-docs.sh)
+scripts/generate-docs.sh            # regenerate docs/ via tfplugindocs
+.goreleaser.yml                     # GoReleaser release build/sign config
+.github/workflows/                  # CI (test + fmt) and release
 ```
 
 ## Conventions
@@ -96,26 +97,17 @@ go test ./...
 # Format example HCL
 terraform fmt -recursive examples/
 
-# Generate docs (once tfplugindocs is wired up)
-go generate ./...
-
-# Release to TFC private provider registry
-op run --env-file=.tfc-release.env -- scripts/tfc-release.sh 0.2.0
+# Regenerate docs/ from the live schema + examples/
+scripts/generate-docs.sh
 ```
 
 ## Releasing
 
-The provider is distributed via TFC private providers, not the public
-registry, while it's pre-1.0. `scripts/tfc-release.sh` does the
-build/sign/upload dance end-to-end. Required env vars — documented
-in `scripts/tfc-release.sh` — set in `.tfc-release.env` (gitignored):
-
-- `TFC_ORG`, `TFC_TOKEN` — TFC org and a user/team token with
-  registry-providers write permission.
-- `GPG_KEY_ID` — 40-char fingerprint of the signing key. The secret
-  key must be importable locally; bootstrap from 1Password:
-  `op read 'op://Rashadnyk/Aperture TFC Provider Signing Key/private_key' | gpg --import`.
-
-Provider uses no encryption subkey by design (sign-only). Don't
-recreate it — the fingerprint is referenced in `versions.tf`
-consumers.
+The provider is published to the **public** Terraform Registry as
+`langri-sha/aperture`. To cut a release, publish a GitHub Release for a
+`vX.Y.Z` tag and write the notes there. The `Release` workflow
+(`.github/workflows/release.yml`) runs GoReleaser (`.goreleaser.yml`),
+which builds the cross-platform archives, generates and GPG-signs
+`SHA256SUMS`, and attaches them plus `terraform-registry-manifest.json`
+to the release. `release.mode: keep-existing` preserves the notes you
+wrote. The registry ingests the release automatically.
