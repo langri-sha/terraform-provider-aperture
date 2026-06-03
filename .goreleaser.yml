@@ -1,0 +1,74 @@
+# GoReleaser config for publishing terraform-provider-aperture to the public
+# Terraform Registry (langri-sha/aperture). Follows HashiCorp's provider
+# release template: cross-platform zips, a SHA256SUMS checksum file signed
+# with the registered GPG key, and the registry manifest shipped alongside.
+# See https://goreleaser.com and the registry's release-asset expectations.
+version: 2
+
+project_name: terraform-provider-aperture
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - # The entrypoint lives under cmd/, not the repo root.
+    main: ./cmd/terraform-provider-aperture
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    flags:
+      - -trimpath
+    # version/commit are consumed by main.go's ldflag vars.
+    ldflags:
+      - "-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}"
+    goos:
+      - freebsd
+      - windows
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - "386"
+      - arm
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: "386"
+    binary: "{{ .ProjectName }}_v{{ .Version }}"
+
+archives:
+  - formats: ["zip"]
+    # Registry expects: terraform-provider-aperture_<version>_<os>_<arch>.zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  extra_files:
+    - glob: terraform-registry-manifest.json
+      name_template: "{{ .ProjectName }}_{{ .Version }}_manifest.json"
+  name_template: "{{ .ProjectName }}_{{ .Version }}_SHA256SUMS"
+  algorithm: sha256
+
+signs:
+  - artifacts: checksum
+    args:
+      # GPG_FINGERPRINT is exported by the import-gpg step in CI. Batch +
+      # detach-sign matches the sign-only signing key registered with the
+      # registry.
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+
+release:
+  mode: keep-existing
+  extra_files:
+    - glob: terraform-registry-manifest.json
+      name_template: "{{ .ProjectName }}_{{ .Version }}_manifest.json"
+
+# CHANGELOG.md is maintained by hand; don't let GoReleaser generate one.
+changelog:
+  disable: true
