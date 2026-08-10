@@ -44,7 +44,7 @@ func (p *apertureProvider) Schema(_ context.Context, _ provider.SchemaRequest, r
 		Attributes: map[string]schema.Attribute{
 			"endpoint": schema.StringAttribute{
 				Required:    true,
-				Description: "Full base URL of the Aperture admin API including the /aperture path prefix, e.g. https://ai.<tailnet>.ts.net/aperture.",
+				Description: "Full base URL of the Aperture admin API including the /aperture path prefix, e.g. http://ai.<tailnet>.ts.net/aperture. Both http:// and https:// are accepted; the tailnet itself provides transport encryption and caller identity.",
 				// Validators run in order: URL format check must pass before protocol and path checks.
 				Validators: []validator.String{
 					endpointURLValidator{},
@@ -109,15 +109,23 @@ func (v endpointURLValidator) ValidateString(ctx context.Context, req validator.
 	}
 }
 
-// endpointProtocolValidator validates that the endpoint uses https:// protocol.
+// endpointProtocolValidator validates that the endpoint uses the http:// or
+// https:// protocol.
+//
+// HTTP is the norm rather than an insecure fallback: Aperture serves its admin
+// API over plain HTTP on the tailnet (upstream's own launcher defaults to
+// "http://ai"), and WireGuard already provides both transport encryption and
+// the caller identity this API authenticates on. HTTPS stays accepted because
+// gateways fronted with a Tailscale TLS certificate serve the same API over
+// https://<node>.<tailnet>.ts.net.
 type endpointProtocolValidator struct{}
 
 func (v endpointProtocolValidator) Description(ctx context.Context) string {
-	return "endpoint must use https:// protocol"
+	return "endpoint must use http:// or https:// protocol"
 }
 
 func (v endpointProtocolValidator) MarkdownDescription(ctx context.Context) string {
-	return "endpoint must use https:// protocol"
+	return "endpoint must use http:// or https:// protocol"
 }
 
 func (v endpointProtocolValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
@@ -132,13 +140,20 @@ func (v endpointProtocolValidator) ValidateString(ctx context.Context, req valid
 		return
 	}
 
-	if parsed.Scheme != "https" {
-		resp.Diagnostics.Append(diag.NewAttributeErrorDiagnostic(
-			req.Path,
-			"Invalid Endpoint Protocol",
-			"endpoint must use https:// protocol, not "+parsed.Scheme+"://",
-		))
+	switch parsed.Scheme {
+	case "http", "https":
+		return
 	}
+
+	got := parsed.Scheme + "://"
+	if parsed.Scheme == "" {
+		got = "a URL with no scheme"
+	}
+	resp.Diagnostics.Append(diag.NewAttributeErrorDiagnostic(
+		req.Path,
+		"Invalid Endpoint Protocol",
+		"endpoint must use http:// or https:// protocol, not "+got,
+	))
 }
 
 // endpointPathValidator validates that the endpoint path ends with /aperture.

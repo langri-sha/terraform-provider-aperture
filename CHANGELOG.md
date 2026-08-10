@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- The provider accepts `http://` endpoints again. Aperture serves its admin API
+  over plain HTTP on the tailnet — upstream's own launcher defaults to
+  `http://ai` — and authenticates callers by Tailscale identity at the network
+  layer, so the HTTPS-only validation added in 0.2.1 rejected the correct
+  endpoint shape (`http://ai.<tailnet>.ts.net/aperture`). `https://` stays
+  accepted for gateways fronted with a Tailscale TLS certificate; every other
+  scheme is still rejected, as is an endpoint whose path doesn't end in
+  `/aperture`. The redirect-following, response-size, and TLS 1.3 minimum
+  hardening from 0.2.1 is unchanged.
+
 ## [0.3.1] — 2026-06-03
 
 ### Changed
