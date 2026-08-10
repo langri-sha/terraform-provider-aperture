@@ -34,4 +34,4 @@ provider "aperture" {
 
 ### Required
 
-- `endpoint` (String) Full base URL of the Aperture admin API including the /aperture path prefix, e.g. https://ai.<tailnet>.ts.net/aperture.
+- `endpoint` (String) Full base URL of the Aperture admin API including the /aperture path prefix, e.g. http://ai.<tailnet>.ts.net/aperture. Both http:// and https:// are accepted; the tailnet itself provides transport encryption and caller identity.

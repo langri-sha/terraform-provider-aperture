@@ -35,7 +35,8 @@ provider "tailscale" {
 }
 
 # 2. Tailnet ACL — owns tag:ai-aperture and lets group:developers
-#    reach it on 443 (the data-plane port for LLM proxying).
+#    reach it on 80, the port the gateway serves on over the tailnet
+#    (443 instead if you front it with a Tailscale TLS certificate).
 resource "tailscale_acl" "policy" {
   acl = jsonencode({
     tagOwners = {
@@ -48,7 +49,7 @@ resource "tailscale_acl" "policy" {
       {
         action = "accept"
         src    = ["group:developers"]
-        dst    = ["tag:ai-aperture:443"]
+        dst    = ["tag:ai-aperture:80"]
       },
     ]
   })
@@ -56,11 +57,12 @@ resource "tailscale_acl" "policy" {
   overwrite_existing_content = true
 }
 
-# 3. Aperture provider — points at the gateway's admin API. The endpoint
-#    must use HTTPS; auth is by Tailscale identity, no api_key attribute.
-#    The /aperture path suffix is mandatory for the provider's internal routing.
+# 3. Aperture provider — points at the gateway's admin API. Plain HTTP: the
+#    tailnet carries the encryption and the identity, and auth is by Tailscale
+#    identity, so there's no api_key attribute. The /aperture path suffix is
+#    mandatory for the provider's internal routing.
 provider "aperture" {
-  endpoint = "https://ai.${var.tailnet}/aperture"
+  endpoint = "http://ai.${var.tailnet}/aperture"
 }
 
 # 4. The Aperture configuration document itself. One singleton, one

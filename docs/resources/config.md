@@ -17,8 +17,8 @@ The singleton Aperture configuration document. Field names mirror the upstream H
 # resource instances pointing at the same provider endpoint will stomp
 # each other.
 #
-# Note: The provider endpoint must use HTTPS and include the /aperture path suffix.
-# Example: endpoint = "https://ai.your-tailnet.ts.net/aperture"
+# Note: The provider endpoint must include the /aperture path suffix.
+# Example: endpoint = "http://ai.your-tailnet.ts.net/aperture"
 
 resource "aperture_config" "main" {
   providers = {
