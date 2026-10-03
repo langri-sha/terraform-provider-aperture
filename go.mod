@@ -2,6 +2,8 @@ module github.com/langri-sha/aperture
 
 go 1.26
 
+toolchain go1.26.8
+
 require (
 	github.com/hashicorp/terraform-plugin-framework v1.19.0
 	github.com/tailscale/hujson v0.0.0-20260302212456-ecc657c15afd
