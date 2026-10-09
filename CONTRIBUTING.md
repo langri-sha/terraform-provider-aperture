@@ -5,7 +5,7 @@ major changes. The only hard rules:
 
 - All Go code passes `go vet ./...` and `go test -race ./...`.
 - All Terraform examples pass `terraform fmt -check -recursive examples`.
-- Commits are conventional (`feat:`, `fix:`, `chore:`, etc.).
+- Commit subjects are plain imperative sentences, without type prefixes.
 
 ## Layout
 
