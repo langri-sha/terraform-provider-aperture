@@ -20,25 +20,21 @@ developer grant. Read that first if you've never used the provider.
 
 ## Running against a local build
 
-The provider isn't on the public Terraform Registry. Two options:
+To try unreleased changes, build the binary and point a `~/.terraformrc`
+at it with `dev_overrides`:
 
-1. **TFC private provider.** `app.terraform.io/<org>/aperture` — see
-   [`scripts/tfc-release.sh`](../scripts/tfc-release.sh).
-2. **Local `dev_overrides`.** Build the binary and point a
-   `~/.terraformrc` at it:
+```hcl
+provider_installation {
+  dev_overrides {
+    "langri-sha/aperture" = "/path/to/aperture/dist"
+  }
+  direct {}
+}
+```
 
-   ```hcl
-   provider_installation {
-     dev_overrides {
-       "langri-sha/aperture" = "/path/to/aperture/dist"
-     }
-     direct {}
-   }
-   ```
-
-   Then `go build -o dist/terraform-provider-aperture ./cmd/terraform-provider-aperture`
-   and run `terraform plan` from any of the example directories.
-   Skip `terraform init` — dev overrides bypass the lock file.
+Then `go build -o dist/terraform-provider-aperture ./cmd/terraform-provider-aperture`
+and run `terraform plan` from any of the example directories.
+Skip `terraform init` — dev overrides bypass the lock file.
 
 ## Importing an existing live config
 
