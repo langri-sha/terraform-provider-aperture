@@ -47,7 +47,6 @@ Don't invent fields. If upstream doesn't document it, leave it out.
 
 ## Conventions
 
-- **Atomic commits.** One logical change per commit.
 - **No idempotent fluff.** No `cmd || true`, no swallowed errors, no
   "tolerate pre-existing state" patterns. Strict failure with a clear
   error beats silent recovery.
@@ -55,10 +54,6 @@ Don't invent fields. If upstream doesn't document it, leave it out.
   read `/aperture/openapi.json` from a live gateway or
   `tailscale/aperture-cli`'s source. Web-fetched marketing pages are
   not authoritative.
-- **Comments explain *why*, not *what*.** The reader can see what the
-  code does. They can't see why a field is `Optional` instead of
-  `Required`, or why we preserve apikeys from prior state on Read.
-- **No emojis** unless explicitly requested.
 - **HCL field names mirror upstream JSON.** `baseurl`, not `base_url`;
   `apikey`, not `api_key`. Keep HCL → HuJSON one-to-one wherever
   possible so users can cross-reference Aperture docs without
