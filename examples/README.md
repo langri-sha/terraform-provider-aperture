@@ -33,8 +33,9 @@ provider_installation {
 ```
 
 Then `go build -o dist/terraform-provider-aperture ./cmd/terraform-provider-aperture`
-and run `terraform plan` from any of the example directories.
-Skip `terraform init` — dev overrides bypass the lock file.
+and run `terraform init` and `terraform plan` from any of the example
+directories. `init` skips the overridden provider but still installs the
+others, such as `tailscale/tailscale` for the quickstart.
 
 ## Importing an existing live config
 
