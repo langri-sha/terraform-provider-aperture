@@ -72,13 +72,10 @@ state instead of overwriting with the redaction marker. If you add a
 new sensitive field to the schema, update the merge function or the
 provider will leak redacted values into `terraform plan` output.
 
-## Releasing
+## Release
 
-The provider is published to the **public** Terraform Registry as
-`langri-sha/aperture`. To cut a release, publish a GitHub Release for a
-`vX.Y.Z` tag and write the notes there. The `Release` workflow
-(`.github/workflows/release.yml`) runs GoReleaser (`.goreleaser.yml`),
-which builds the cross-platform archives, generates and GPG-signs
-`SHA256SUMS`, and attaches them plus `terraform-registry-manifest.json`
-to the release. `release.mode: keep-existing` preserves the notes you
-wrote. The registry ingests the release automatically.
+Publishing a GitHub Release for a `vX.Y.Z` tag releases the provider: the
+Release workflow builds and signs it with GoReleaser, and the public Terraform
+Registry ingests it as `langri-sha/aperture`. Follow the Releasing steps in
+[`CONTRIBUTING.md`](./CONTRIBUTING.md), which start with the hand-kept
+`CHANGELOG.md`.
