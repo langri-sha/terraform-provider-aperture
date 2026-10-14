@@ -1,8 +1,4 @@
-# AGENTS.md
-
-Context for AI coding agents working in this repo.
-
-## What this is
+# Agents orientation — `langri-sha/terraform-provider-aperture`
 
 A Terraform provider, written in Go using the
 [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework),
