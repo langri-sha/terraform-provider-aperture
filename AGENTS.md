@@ -67,6 +67,14 @@ state instead of overwriting with the redaction marker. If you add a
 new sensitive field to the schema, update the merge function or the
 provider will leak redacted values into `terraform plan` output.
 
+## CI
+
+`test.yml` fails when `go mod tidy` changes `go.mod` or `go.sum`, on
+`go vet`, `go test -race` or the build, when
+`terraform fmt -check -recursive examples` finds unformatted HCL, and when
+`docs/` differs from what `scripts/generate-docs.sh` renders. After changing the
+schema or the examples, run the script and commit `docs/`.
+
 ## Release
 
 Publishing a GitHub Release for a `vX.Y.Z` tag releases the provider: the
