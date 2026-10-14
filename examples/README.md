@@ -1,8 +1,8 @@
 # Examples
 
 Layout follows [terraform-plugin-docs](https://github.com/hashicorp/terraform-plugin-docs)
-conventions, so `tfplugindocs generate` can pick them up unmodified
-once docs generation is wired up.
+conventions: `scripts/generate-docs.sh` renders `provider/` and `resources/`
+into `docs/`.
 
 ```
 provider/                          provider block example -> docs/index.md
