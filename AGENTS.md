@@ -3,7 +3,9 @@
 A Terraform provider, written in Go using the
 [Terraform Plugin Framework](https://developer.hashicorp.com/terraform/plugin/framework),
 for [Aperture by Tailscale](https://tailscale.com/docs/aperture). See
-[`README.md`](./README.md) for the user-facing description.
+[`README.md`](./README.md) for the user-facing description and
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) for the layout, the development commands
+and the checks every change must pass.
 
 ## Upstream surface
 
@@ -43,19 +45,6 @@ Top-level keys (mirror upstream verbatim — do not rename):
 
 Don't invent fields. If upstream doesn't document it, leave it out.
 
-## Layout
-
-```
-cmd/terraform-provider-aperture/   # main.go — providerserver entrypoint
-internal/aperture/                  # HTTP client (config.go: wire types; client.go: GET/PUT/validate)
-internal/provider/                  # plugin-framework provider + resources
-examples/                           # terraform-plugin-docs example layout + quickstart
-docs/                               # generated docs (scripts/generate-docs.sh)
-scripts/generate-docs.sh            # regenerate docs/ via tfplugindocs
-.goreleaser.yml                     # GoReleaser release build/sign config
-.github/workflows/                  # CI (test + fmt) and release
-```
-
 ## Conventions
 
 - **Atomic commits.** One logical change per commit.
@@ -82,20 +71,6 @@ scripts/generate-docs.sh            # regenerate docs/ via tfplugindocs
 state instead of overwriting with the redaction marker. If you add a
 new sensitive field to the schema, update the merge function or the
 provider will leak redacted values into `terraform plan` output.
-
-## Common commands
-
-```sh
-go mod tidy
-go vet ./...
-go test ./...
-
-# Format example HCL
-terraform fmt -recursive examples/
-
-# Regenerate docs/ from the live schema + examples/
-scripts/generate-docs.sh
-```
 
 ## Releasing
 
