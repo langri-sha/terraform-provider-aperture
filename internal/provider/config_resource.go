@@ -315,17 +315,16 @@ func (r *configResource) applyPlan(ctx context.Context, plan *configResourceMode
 
 const changedExternally = "Re-run `terraform apply -refresh-only` (or `terraform plan`) to pick up the latest state, then apply again."
 
-// preserveSensitiveFromPrior copies sensitive values from prior
-// state into a freshly-Read model. Aperture's GET redacts apikeys
-// and authorization headers; accepting the redaction marker would
-// either leak it into state or cause spurious diffs on every plan.
-// We trust the user's HCL as the source of truth for those fields.
+// preserveSensitiveFromPrior carries values the gateway never returns in
+// the clear from prior state into a freshly read model. GET redacts
+// every apikey, and the redaction marker is opaque, so apikeys come from
+// prior state or stay null; they are never read from the gateway.
+// add_headers values may carry credentials too, and are kept from prior
+// state when there is one.
 func preserveSensitiveFromPrior(server, prior *configResourceModel) {
 	for name, sp := range server.Providers {
 		if pp, ok := prior.Providers[name]; ok {
-			if !pp.APIKey.IsNull() {
-				sp.APIKey = pp.APIKey
-			}
+			sp.APIKey = pp.APIKey
 			if len(pp.AddHeaders) > 0 {
 				sp.AddHeaders = pp.AddHeaders
 			}
@@ -334,9 +333,7 @@ func preserveSensitiveFromPrior(server, prior *configResourceModel) {
 	}
 	for name, sh := range server.Hooks {
 		if ph, ok := prior.Hooks[name]; ok {
-			if !ph.APIKey.IsNull() {
-				sh.APIKey = ph.APIKey
-			}
+			sh.APIKey = ph.APIKey
 			server.Hooks[name] = sh
 		}
 	}
@@ -448,7 +445,8 @@ func toAPIConfig(m *configResourceModel) (*aperture.Config, error) {
 	return out, nil
 }
 
-// fromAPIConfig is the inverse of toAPIConfig.
+// fromAPIConfig is the inverse of toAPIConfig, except that it leaves
+// apikey null: see preserveSensitiveFromPrior.
 func fromAPIConfig(c *aperture.Config) configResourceModel {
 	m := configResourceModel{}
 
@@ -458,7 +456,6 @@ func fromAPIConfig(c *aperture.Config) configResourceModel {
 			m.Providers[name] = providerEntry{
 				BaseURL:       types.StringValue(p.BaseURL),
 				Models:        typedListFromStrings(p.Models),
-				APIKey:        nullableString(p.APIKey),
 				Authorization: nullableString(p.Authorization),
 				Name:          nullableString(p.Name),
 				Description:   nullableString(p.Description),
@@ -500,7 +497,6 @@ func fromAPIConfig(c *aperture.Config) configResourceModel {
 		for name, h := range c.Hooks {
 			m.Hooks[name] = hookEntry{
 				URL:           types.StringValue(h.URL),
-				APIKey:        nullableString(h.APIKey),
 				Authorization: nullableString(h.Authorization),
 				Timeout:       nullableString(h.Timeout),
 				Disabled:      nullableBool(h.Disabled),

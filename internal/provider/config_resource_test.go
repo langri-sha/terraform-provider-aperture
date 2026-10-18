@@ -122,26 +122,52 @@ func TestRoundTrip_PreservesShape(t *testing.T) {
 	}
 }
 
-func TestPreserveSensitiveFromPrior(t *testing.T) {
+func TestFromAPIConfig_NeverReadsAPIKeys(t *testing.T) {
+	in := `{
+		"providers": {"a": {"baseurl": "https://a.example", "models": ["m"], "apikey": "marker-from-gateway"}},
+		"hooks": {"h": {"url": "https://h.example", "apikey": "marker-from-gateway"}}
+	}`
+	doc, err := aperture.ParseConfigDocument(in)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	model := fromAPIConfig(doc)
+
+	if !model.Providers["a"].APIKey.IsNull() || !model.Hooks["h"].APIKey.IsNull() {
+		t.Errorf("apikey read from the gateway: %+v %+v", model.Providers["a"].APIKey, model.Hooks["h"].APIKey)
+	}
+}
+
+func TestPreserveSensitiveFromPrior_KeepsAPIKeysFromPriorState(t *testing.T) {
 	prior := configResourceModel{
-		Providers: map[string]providerEntry{
-			"openai": {
-				BaseURL: types.StringValue("https://api.openai.com/v1"),
-				APIKey:  types.StringValue("sk-real"),
-			},
-		},
+		Providers: map[string]providerEntry{"openai": {APIKey: types.StringValue("sk-real")}},
+		Hooks:     map[string]hookEntry{"audit": {APIKey: types.StringValue("hook-real")}},
 	}
 	server := configResourceModel{
-		Providers: map[string]providerEntry{
-			"openai": {
-				BaseURL: types.StringValue("https://api.openai.com/v1"),
-				APIKey:  types.StringValue("sk-***REDACTED***"),
-			},
-		},
+		Providers: map[string]providerEntry{"openai": {BaseURL: types.StringValue("https://api.openai.com")}},
+		Hooks:     map[string]hookEntry{"audit": {URL: types.StringValue("https://audit.example")}},
 	}
+
 	preserveSensitiveFromPrior(&server, &prior)
+
 	if got := server.Providers["openai"].APIKey.ValueString(); got != "sk-real" {
-		t.Errorf("apikey not preserved: got %q, want %q", got, "sk-real")
+		t.Errorf("provider apikey = %q", got)
+	}
+	if got := server.Hooks["audit"].APIKey.ValueString(); got != "hook-real" {
+		t.Errorf("hook apikey = %q", got)
+	}
+}
+
+func TestPreserveSensitiveFromPrior_LeavesAPIKeyNullWithoutPriorState(t *testing.T) {
+	server := configResourceModel{
+		Providers: map[string]providerEntry{"openai": {BaseURL: types.StringValue("https://api.openai.com")}},
+	}
+
+	preserveSensitiveFromPrior(&server, &configResourceModel{})
+
+	if !server.Providers["openai"].APIKey.IsNull() {
+		t.Errorf("apikey = %v", server.Providers["openai"].APIKey)
 	}
 }
 
