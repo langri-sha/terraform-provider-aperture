@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -339,5 +340,51 @@ func TestRoundTrip_GrantQuotasAndSendHooks(t *testing.T) {
 	}
 	if len(c.SendHooks) != 1 || c.SendHooks[0].Name != "oso" || c.SendHooks[0].Events[0] != "tool_call_entire_request" || len(c.SendHooks[0].Send) != 2 {
 		t.Errorf("send_hooks = %+v", c.SendHooks)
+	}
+}
+
+func TestRoundTrip_JSONSections(t *testing.T) {
+	in := `{"exporters": {"s3": {"bucket": "b"}}, "flags": {"f": {"value": true}}, "chat_models": [{"model": "**"}]}`
+	doc, err := aperture.ParseConfigDocument(in)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	model := fromAPIConfig(doc)
+	out, err := toAPIConfig(&model)
+	if err != nil {
+		t.Fatalf("toAPIConfig: %v", err)
+	}
+
+	if string(out.Exporters) != `{"s3":{"bucket":"b"}}` || string(out.Flags) != `{"f":{"value":true}}` || string(out.ChatModels) != `[{"model":"**"}]` {
+		t.Errorf("sections = %s %s %s", out.Exporters, out.Flags, out.ChatModels)
+	}
+	if !model.Database.IsNull() || len(out.Database) != 0 {
+		t.Errorf("absent section must stay null: %v %s", model.Database, out.Database)
+	}
+}
+
+func TestToAPIConfig_RejectsAJSONSectionThatIsNotJSON(t *testing.T) {
+	m := &configResourceModel{Exporters: jsontypes.NewNormalizedValue("{not json")}
+
+	if _, err := toAPIConfig(m); err == nil {
+		t.Fatal("expected an error")
+	}
+}
+
+func TestLeaveUnmanagedSectionsNull(t *testing.T) {
+	server := configResourceModel{
+		Exporters: jsontypes.NewNormalizedValue(`{"a":1}`),
+		Flags:     jsontypes.NewNormalizedValue(`{"f":{"value":true}}`),
+	}
+	prior := configResourceModel{Flags: jsontypes.NewNormalizedValue(`{"f":{"value":false}}`)}
+
+	leaveUnmanagedSectionsNull(&server, &prior)
+
+	if !server.Exporters.IsNull() {
+		t.Errorf("unmanaged exporters = %v", server.Exporters)
+	}
+	if server.Flags.ValueString() != `{"f":{"value":true}}` {
+		t.Errorf("managed flags = %v", server.Flags)
 	}
 }
