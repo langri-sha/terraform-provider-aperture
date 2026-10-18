@@ -74,6 +74,7 @@ type modelCostEntry struct {
 
 type grantEntry struct {
 	Src          []types.String    `tfsdk:"src"`
+	Dst          []types.String    `tfsdk:"dst"`
 	Capabilities []capabilityEntry `tfsdk:"capabilities"`
 }
 
@@ -172,6 +173,7 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"src": schema.ListAttribute{ElementType: types.StringType, Required: true},
+						"dst": schema.ListAttribute{ElementType: types.StringType, Optional: true, Description: "Destinations, needed only when the grant is meant to be copied into a tailnet policy file."},
 						"capabilities": schema.ListNestedAttribute{
 							Required: true,
 							NestedObject: schema.NestedAttributeObject{
@@ -479,6 +481,7 @@ func toAPIConfig(m *configResourceModel) (*aperture.Config, error) {
 			}
 			out.Grants = append(out.Grants, aperture.Grant{
 				Src: stringsFromTypedList(g.Src),
+				Dst: optionalStrings(g.Dst),
 				App: aperture.GrantApp{Aperture: caps},
 			})
 		}
@@ -567,6 +570,7 @@ func fromAPIConfig(c *aperture.Config) configResourceModel {
 			}
 			m.Grants = append(m.Grants, grantEntry{
 				Src:          typedListFromStrings(g.Src),
+				Dst:          optionalTypedList(g.Dst),
 				Capabilities: caps,
 			})
 		}
@@ -705,4 +709,21 @@ func modelCostMapFromAPI(in []aperture.ModelCost) []modelCostEntry {
 		out = append(out, e)
 	}
 	return out
+}
+
+// optionalStrings is nil for an empty list, which the wire form omits.
+func optionalStrings(in []types.String) []string {
+	if len(in) == 0 {
+		return nil
+	}
+	return stringsFromTypedList(in)
+}
+
+// optionalTypedList is nil for an empty list, which Terraform reads as
+// null rather than an empty list.
+func optionalTypedList(in []string) []types.String {
+	if len(in) == 0 {
+		return nil
+	}
+	return typedListFromStrings(in)
 }

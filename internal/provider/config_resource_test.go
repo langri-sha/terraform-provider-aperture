@@ -256,3 +256,27 @@ func TestRoundTrip_ProviderAuthModeCompatibilityAndModelCostMap(t *testing.T) {
 		t.Errorf("model_cost_map = %+v", p.ModelCostMap)
 	}
 }
+
+func TestRoundTrip_GrantDestination(t *testing.T) {
+	in := `{"grants": [
+		{"src": ["*"], "dst": ["tag:ai"], "app": {"tailscale.com/cap/aperture": [{"role": "admin"}]}},
+		{"src": ["*"], "app": {"tailscale.com/cap/aperture": [{"models": "**"}]}}
+	]}`
+	doc, err := aperture.ParseConfigDocument(in)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	model := fromAPIConfig(doc)
+	out, err := toAPIConfig(&model)
+	if err != nil {
+		t.Fatalf("toAPIConfig: %v", err)
+	}
+
+	if len(out.Grants[0].Dst) != 1 || out.Grants[0].Dst[0] != "tag:ai" {
+		t.Errorf("dst = %v", out.Grants[0].Dst)
+	}
+	if model.Grants[1].Dst != nil {
+		t.Errorf("absent dst must read back as null, got %v", model.Grants[1].Dst)
+	}
+}
