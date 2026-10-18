@@ -20,16 +20,16 @@ type Config struct {
 
 // Provider is one entry in the top-level `providers` map.
 type Provider struct {
-	BaseURL       string            `json:"baseurl"`
-	Models        []string          `json:"models"`
-	APIKey        string            `json:"apikey,omitempty"`
-	Authorization string            `json:"authorization,omitempty"`
-	Name          string            `json:"name,omitempty"`
-	Description   string            `json:"description,omitempty"`
-	CostBasis     string            `json:"cost_basis,omitempty"`
-	Preference    *int64            `json:"preference,omitempty"`
-	Disabled      *bool             `json:"disabled,omitempty"`
-	AddHeaders    map[string]string `json:"add_headers,omitempty"`
+	BaseURL       string   `json:"baseurl"`
+	Models        []string `json:"models"`
+	APIKey        string   `json:"apikey,omitempty"`
+	Authorization string   `json:"authorization,omitempty"`
+	Name          string   `json:"name,omitempty"`
+	Description   string   `json:"description,omitempty"`
+	CostBasis     string   `json:"cost_basis,omitempty"`
+	Preference    *int64   `json:"preference,omitempty"`
+	Disabled      *bool    `json:"disabled,omitempty"`
+	AddHeaders    []string `json:"add_headers,omitempty"`
 }
 
 // Grant is one entry in the top-level `grants` array. It uses

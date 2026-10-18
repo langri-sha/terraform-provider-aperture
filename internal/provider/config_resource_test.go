@@ -156,3 +156,22 @@ func TestRoundTrip_QuotasAreDollarStrings(t *testing.T) {
 		t.Errorf("quota changed: %+v", q)
 	}
 }
+
+func TestRoundTrip_ProviderAddHeadersAreHeaderLines(t *testing.T) {
+	in := `{"providers": {"a": {"baseurl": "https://a.example", "models": ["m"], "add_headers": ["X-Team: platform", "X-Env: prod"]}}}`
+	doc, err := aperture.ParseConfigDocument(in)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	model := fromAPIConfig(doc)
+	out, err := toAPIConfig(&model)
+	if err != nil {
+		t.Fatalf("toAPIConfig: %v", err)
+	}
+
+	got := out.Providers["a"].AddHeaders
+	if len(got) != 2 || got[0] != "X-Team: platform" || got[1] != "X-Env: prod" {
+		t.Errorf("add_headers changed: %v", got)
+	}
+}
