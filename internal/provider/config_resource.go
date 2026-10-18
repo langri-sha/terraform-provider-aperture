@@ -79,15 +79,28 @@ type grantEntry struct {
 }
 
 type capabilityEntry struct {
-	Role              types.String   `tfsdk:"role"`
-	Models            types.String   `tfsdk:"models"`
-	Connectors        []types.String `tfsdk:"connectors"`
-	AddHeaders        []types.String `tfsdk:"add_headers"`
-	FilterableHeaders []types.String `tfsdk:"filterable_headers"`
-	EnablePortal      types.Bool     `tfsdk:"enable_portal"`
-	ReadMetrics       types.Bool     `tfsdk:"read_metrics"`
-	SetCORS           types.Bool     `tfsdk:"set_cors"`
-	CORSPaths         []types.String `tfsdk:"cors_paths"`
+	Role              types.String      `tfsdk:"role"`
+	Models            types.String      `tfsdk:"models"`
+	Connectors        []types.String    `tfsdk:"connectors"`
+	Quotas            []grantQuotaEntry `tfsdk:"quotas"`
+	SendHooks         []sendHookEntry   `tfsdk:"send_hooks"`
+	AddHeaders        []types.String    `tfsdk:"add_headers"`
+	FilterableHeaders []types.String    `tfsdk:"filterable_headers"`
+	EnablePortal      types.Bool        `tfsdk:"enable_portal"`
+	ReadMetrics       types.Bool        `tfsdk:"read_metrics"`
+	SetCORS           types.Bool        `tfsdk:"set_cors"`
+	CORSPaths         []types.String    `tfsdk:"cors_paths"`
+}
+
+type grantQuotaEntry struct {
+	Bucket     types.String   `tfsdk:"bucket"`
+	Overdrafts []types.String `tfsdk:"overdrafts"`
+}
+
+type sendHookEntry struct {
+	Name   types.String   `tfsdk:"name"`
+	Events []types.String `tfsdk:"events"`
+	Send   []types.String `tfsdk:"send"`
 }
 
 type quotaEntry struct {
@@ -190,6 +203,27 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 									"connectors": schema.ListAttribute{
 										ElementType: types.StringType, Optional: true,
 										Description: "Connector access, as globs in connectorID/category/resource form or label:<name>, e.g. aperture/**.",
+									},
+									"quotas": schema.ListNestedAttribute{
+										Optional:    true,
+										Description: "Quota buckets charged when the grant matches. A bucket takes effect only when a grant attaches it.",
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"bucket":     schema.StringAttribute{Required: true, Description: "Name of a bucket in the top-level quotas, templates included, e.g. daily:<user>."},
+												"overdrafts": schema.ListAttribute{ElementType: types.StringType, Optional: true, Description: "Buckets to borrow from, in order, when this one is exhausted."},
+											},
+										},
+									},
+									"send_hooks": schema.ListNestedAttribute{
+										Optional:    true,
+										Description: "Hooks the grant triggers. A hook in the top-level hooks does nothing until a grant sends to it.",
+										NestedObject: schema.NestedAttributeObject{
+											Attributes: map[string]schema.Attribute{
+												"name":   schema.StringAttribute{Required: true, Description: "Key of a hook in the top-level hooks."},
+												"events": schema.ListAttribute{ElementType: types.StringType, Required: true, Description: "pre_request, entire_request or tool_call_entire_request."},
+												"send":   schema.ListAttribute{ElementType: types.StringType, Required: true, Description: "Data to include: tools, user_message, request_body, response_body, raw_responses or quotas."},
+											},
+										},
 									},
 									"add_headers": schema.ListAttribute{
 										ElementType: types.StringType, Optional: true, Sensitive: true,
@@ -504,6 +538,8 @@ func toAPIConfig(m *configResourceModel) (*aperture.Config, error) {
 					Role:              c.Role.ValueString(),
 					Models:            c.Models.ValueString(),
 					Connectors:        optionalStrings(c.Connectors),
+					Quotas:            grantQuotasToAPI(c.Quotas),
+					SendHooks:         sendHooksToAPI(c.SendHooks),
 					AddHeaders:        optionalStrings(c.AddHeaders),
 					FilterableHeaders: optionalStrings(c.FilterableHeaders),
 					EnablePortal:      boolPointer(c.EnablePortal),
@@ -600,6 +636,8 @@ func fromAPIConfig(c *aperture.Config) configResourceModel {
 					Role:              nullableString(cap.Role),
 					Models:            nullableString(cap.Models),
 					Connectors:        optionalTypedList(cap.Connectors),
+					Quotas:            grantQuotasFromAPI(cap.Quotas),
+					SendHooks:         sendHooksFromAPI(cap.SendHooks),
 					AddHeaders:        optionalTypedList(cap.AddHeaders),
 					FilterableHeaders: optionalTypedList(cap.FilterableHeaders),
 					EnablePortal:      nullableBool(cap.EnablePortal),
@@ -774,4 +812,48 @@ func boolPointer(b types.Bool) *bool {
 	}
 	v := b.ValueBool()
 	return &v
+}
+
+func grantQuotasToAPI(in []grantQuotaEntry) []aperture.GrantQuota {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]aperture.GrantQuota, 0, len(in))
+	for _, q := range in {
+		out = append(out, aperture.GrantQuota{Bucket: q.Bucket.ValueString(), Overdrafts: optionalStrings(q.Overdrafts)})
+	}
+	return out
+}
+
+func grantQuotasFromAPI(in []aperture.GrantQuota) []grantQuotaEntry {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]grantQuotaEntry, 0, len(in))
+	for _, q := range in {
+		out = append(out, grantQuotaEntry{Bucket: types.StringValue(q.Bucket), Overdrafts: optionalTypedList(q.Overdrafts)})
+	}
+	return out
+}
+
+func sendHooksToAPI(in []sendHookEntry) []aperture.SendHook {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]aperture.SendHook, 0, len(in))
+	for _, h := range in {
+		out = append(out, aperture.SendHook{Name: h.Name.ValueString(), Events: stringsFromTypedList(h.Events), Send: stringsFromTypedList(h.Send)})
+	}
+	return out
+}
+
+func sendHooksFromAPI(in []aperture.SendHook) []sendHookEntry {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]sendHookEntry, 0, len(in))
+	for _, h := range in {
+		out = append(out, sendHookEntry{Name: types.StringValue(h.Name), Events: typedListFromStrings(h.Events), Send: typedListFromStrings(h.Send)})
+	}
+	return out
 }

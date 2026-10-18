@@ -316,3 +316,28 @@ func TestRoundTrip_GrantCapabilityFields(t *testing.T) {
 		t.Errorf("absent connectors must read back as null")
 	}
 }
+
+func TestRoundTrip_GrantQuotasAndSendHooks(t *testing.T) {
+	in := `{"grants": [{"src": ["*"], "app": {"tailscale.com/cap/aperture": [
+		{"models": "**", "quotas": [{"bucket": "daily:<user>", "overdrafts": ["pool"]}, {"bucket": "pool"}],
+		 "send_hooks": [{"name": "oso", "events": ["tool_call_entire_request"], "send": ["tools", "user_message"]}]}
+	]}}]}`
+	doc, err := aperture.ParseConfigDocument(in)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	model := fromAPIConfig(doc)
+	out, err := toAPIConfig(&model)
+	if err != nil {
+		t.Fatalf("toAPIConfig: %v", err)
+	}
+
+	c := out.Grants[0].App.Aperture[0]
+	if len(c.Quotas) != 2 || c.Quotas[0].Bucket != "daily:<user>" || c.Quotas[0].Overdrafts[0] != "pool" || c.Quotas[1].Overdrafts != nil {
+		t.Errorf("quotas = %+v", c.Quotas)
+	}
+	if len(c.SendHooks) != 1 || c.SendHooks[0].Name != "oso" || c.SendHooks[0].Events[0] != "tool_call_entire_request" || len(c.SendHooks[0].Send) != 2 {
+		t.Errorf("send_hooks = %+v", c.SendHooks)
+	}
+}

@@ -77,15 +77,32 @@ type GrantApp struct {
 // header fields (Access-Control-Allow-*) are not modelled, and are kept
 // as the gateway holds them.
 type GrantCapability struct {
-	Role              string   `json:"role,omitempty"`
-	Models            string   `json:"models,omitempty"`
-	Connectors        []string `json:"connectors,omitempty"`
-	AddHeaders        []string `json:"add_headers,omitempty"`
-	FilterableHeaders []string `json:"filterable_headers,omitempty"`
-	EnablePortal      *bool    `json:"enable_portal,omitempty"`
-	ReadMetrics       *bool    `json:"read_metrics,omitempty"`
-	SetCORS           *bool    `json:"set_cors,omitempty"`
-	CORSPaths         []string `json:"cors_paths,omitempty"`
+	Role              string       `json:"role,omitempty"`
+	Models            string       `json:"models,omitempty"`
+	Connectors        []string     `json:"connectors,omitempty"`
+	Quotas            []GrantQuota `json:"quotas,omitempty"`
+	SendHooks         []SendHook   `json:"send_hooks,omitempty"`
+	AddHeaders        []string     `json:"add_headers,omitempty"`
+	FilterableHeaders []string     `json:"filterable_headers,omitempty"`
+	EnablePortal      *bool        `json:"enable_portal,omitempty"`
+	ReadMetrics       *bool        `json:"read_metrics,omitempty"`
+	SetCORS           *bool        `json:"set_cors,omitempty"`
+	CORSPaths         []string     `json:"cors_paths,omitempty"`
+}
+
+// GrantQuota attaches a quota bucket to a grant. Overdrafts name the
+// buckets to borrow from, in order, when the bucket is exhausted.
+type GrantQuota struct {
+	Bucket     string   `json:"bucket"`
+	Overdrafts []string `json:"overdrafts,omitempty"`
+}
+
+// SendHook makes a grant trigger a hook from the top-level `hooks` map on
+// the listed events, sending the listed kinds of data.
+type SendHook struct {
+	Name   string   `json:"name"`
+	Events []string `json:"events"`
+	Send   []string `json:"send"`
 }
 
 // Quota is one entry in the top-level `quotas` map.
