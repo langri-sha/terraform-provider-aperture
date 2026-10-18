@@ -388,3 +388,14 @@ func TestLeaveUnmanagedSectionsNull(t *testing.T) {
 		t.Errorf("managed flags = %v", server.Flags)
 	}
 }
+
+func TestSchema_ETagMayChangeOnUpdate(t *testing.T) {
+	var resp resource.SchemaResponse
+	(&configResource{}).Schema(context.Background(), resource.SchemaRequest{}, &resp)
+
+	etag := resp.Schema.Attributes["etag"].(schema.StringAttribute)
+
+	if len(etag.PlanModifiers) != 0 {
+		t.Errorf("etag keeps its prior value in the plan, but every write changes it: %v", etag.PlanModifiers)
+	}
+}

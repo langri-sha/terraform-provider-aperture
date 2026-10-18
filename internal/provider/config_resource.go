@@ -146,9 +146,6 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"etag": schema.StringAttribute{
 				Computed:    true,
 				Description: "Opaque ETag from the gateway, used as If-Match on subsequent updates.",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"providers": schema.MapNestedAttribute{
 				Optional:    true,
