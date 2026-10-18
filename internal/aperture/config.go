@@ -1,5 +1,7 @@
 package aperture
 
+import "encoding/json"
+
 // Config is the typed wire form of an Aperture HuJSON configuration
 // document. Field names mirror upstream JSON keys verbatim
 // (`baseurl`, `apikey`, `add_headers`, `on_exceed`, ...) so the
@@ -16,6 +18,17 @@ type Config struct {
 	Quotas        map[string]Quota    `json:"quotas,omitempty"`
 	Hooks         map[string]Hook     `json:"hooks,omitempty"`
 	AutoCostBasis *bool               `json:"auto_cost_basis,omitempty"`
+
+	// The sections below are carried as JSON the provider does not look
+	// inside. The preserve tag keeps the gateway's section when the Config
+	// leaves it empty, so a section nobody asked to manage is not deleted.
+	Exporters  json.RawMessage `json:"exporters,omitempty" aperture:"preserve"`
+	Database   json.RawMessage `json:"database,omitempty" aperture:"preserve"`
+	Connectors json.RawMessage `json:"connectors,omitempty" aperture:"preserve"`
+	ChatModels json.RawMessage `json:"chat_models,omitempty" aperture:"preserve"`
+	Flags      json.RawMessage `json:"flags,omitempty" aperture:"preserve"`
+	MCP        json.RawMessage `json:"mcp,omitempty" aperture:"preserve"`
+	TempGrants json.RawMessage `json:"temp_grants,omitempty" aperture:"preserve"`
 }
 
 // Provider is one entry in the top-level `providers` map.
