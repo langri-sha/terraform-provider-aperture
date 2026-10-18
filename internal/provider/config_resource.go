@@ -40,16 +40,16 @@ type configResourceModel struct {
 }
 
 type providerEntry struct {
-	BaseURL       types.String      `tfsdk:"baseurl"`
-	Models        []types.String    `tfsdk:"models"`
-	APIKey        types.String      `tfsdk:"apikey"`
-	Authorization types.String      `tfsdk:"authorization"`
-	Name          types.String      `tfsdk:"name"`
-	Description   types.String      `tfsdk:"description"`
-	CostBasis     types.String      `tfsdk:"cost_basis"`
-	Preference    types.Int64       `tfsdk:"preference"`
-	Disabled      types.Bool        `tfsdk:"disabled"`
-	AddHeaders    map[string]string `tfsdk:"add_headers"`
+	BaseURL       types.String   `tfsdk:"baseurl"`
+	Models        []types.String `tfsdk:"models"`
+	APIKey        types.String   `tfsdk:"apikey"`
+	Authorization types.String   `tfsdk:"authorization"`
+	Name          types.String   `tfsdk:"name"`
+	Description   types.String   `tfsdk:"description"`
+	CostBasis     types.String   `tfsdk:"cost_basis"`
+	Preference    types.Int64    `tfsdk:"preference"`
+	Disabled      types.Bool     `tfsdk:"disabled"`
+	AddHeaders    []types.String `tfsdk:"add_headers"`
 }
 
 type grantEntry struct {
@@ -114,7 +114,7 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						"cost_basis":    schema.StringAttribute{Optional: true},
 						"preference":    schema.Int64Attribute{Optional: true},
 						"disabled":      schema.BoolAttribute{Optional: true},
-						"add_headers":   schema.MapAttribute{ElementType: types.StringType, Optional: true, Sensitive: true},
+						"add_headers":   schema.ListAttribute{ElementType: types.StringType, Optional: true, Sensitive: true, Description: "Headers added to every upstream request, each as \"Header-Name: value\"."},
 					},
 				},
 			},
@@ -372,7 +372,7 @@ func toAPIConfig(m *configResourceModel) (*aperture.Config, error) {
 				ap.Disabled = &v
 			}
 			if len(p.AddHeaders) > 0 {
-				ap.AddHeaders = p.AddHeaders
+				ap.AddHeaders = stringsFromTypedList(p.AddHeaders)
 			}
 			out.Providers[name] = ap
 		}
@@ -462,7 +462,7 @@ func fromAPIConfig(c *aperture.Config) configResourceModel {
 				CostBasis:     nullableString(p.CostBasis),
 				Preference:    nullableInt64(p.Preference),
 				Disabled:      nullableBool(p.Disabled),
-				AddHeaders:    p.AddHeaders,
+				AddHeaders:    typedListFromStrings(p.AddHeaders),
 			}
 		}
 	}
