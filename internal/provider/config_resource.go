@@ -182,16 +182,7 @@ func (r *configResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	// Aperture always has a config — Create against an empty backend
-	// would 404. Read first so we can If-Match the PUT and so users
-	// can `terraform import` and then `terraform apply` symmetrically.
-	_, etag, err := r.client.GetConfig(ctx)
-	if err != nil {
-		resp.Diagnostics.AddError("read existing aperture config", err.Error())
-		return
-	}
-
-	if !r.applyPlan(ctx, &plan, etag, &resp.Diagnostics) {
+	if !r.applyPlan(ctx, &plan, "", &resp.Diagnostics) {
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -258,16 +249,39 @@ func (r *configResource) ImportState(ctx context.Context, req resource.ImportSta
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), id)...)
 }
 
-// applyPlan is the shared body of Create and Update: validate via
-// the API, PUT, and stamp the result back into the plan model.
-// Returns false on any error (after recording diagnostics).
-func (r *configResource) applyPlan(ctx context.Context, plan *configResourceModel, etag string, diags *diag.Diagnostics) bool {
-	doc, err := toAPIConfig(plan)
+// applyPlan is the shared body of Create and Update: read the gateway's
+// current document, overlay the plan onto it so keys the provider does
+// not model survive, validate, PUT, and stamp the result back into the
+// plan model. Aperture always has a document, so Create is an overlay
+// onto whatever is there. expectedETag is the ETag the plan was made
+// against; empty means any. Returns false on any error (after recording
+// diagnostics).
+func (r *configResource) applyPlan(ctx context.Context, plan *configResourceModel, expectedETag string, diags *diag.Diagnostics) bool {
+	current, etag, err := r.client.GetConfig(ctx)
+	if err != nil {
+		diags.AddError("read existing aperture config", err.Error())
+		return false
+	}
+	if expectedETag != "" && etag != expectedETag {
+		diags.AddError("aperture configuration changed externally", changedExternally)
+		return false
+	}
+
+	doc, err := aperture.ParseDocument(current)
+	if err != nil {
+		diags.AddError("parse aperture config", err.Error())
+		return false
+	}
+	cfg, err := toAPIConfig(plan)
 	if err != nil {
 		diags.AddError("render aperture config", err.Error())
 		return false
 	}
-	body, err := aperture.MarshalConfigDocument(doc)
+	if err := doc.Apply(cfg); err != nil {
+		diags.AddError("render aperture config", err.Error())
+		return false
+	}
+	body, err := doc.String()
 	if err != nil {
 		diags.AddError("marshal aperture config", err.Error())
 		return false
@@ -288,10 +302,7 @@ func (r *configResource) applyPlan(ctx context.Context, plan *configResourceMode
 	_, newEtag, err := r.client.SetConfig(ctx, body, etag)
 	if err != nil {
 		if errors.Is(err, aperture.ErrPreconditionFailed) {
-			diags.AddError(
-				"aperture configuration changed externally",
-				"Re-run `terraform apply -refresh-only` (or `terraform plan`) to pick up the latest state, then apply again.",
-			)
+			diags.AddError("aperture configuration changed externally", changedExternally)
 			return false
 		}
 		diags.AddError("write aperture config", err.Error())
@@ -301,6 +312,8 @@ func (r *configResource) applyPlan(ctx context.Context, plan *configResourceMode
 	plan.ETag = types.StringValue(newEtag)
 	return true
 }
+
+const changedExternally = "Re-run `terraform apply -refresh-only` (or `terraform plan`) to pick up the latest state, then apply again."
 
 // preserveSensitiveFromPrior copies sensitive values from prior
 // state into a freshly-Read model. Aperture's GET redacts apikeys
