@@ -30,13 +30,13 @@ type configResource struct {
 }
 
 type configResourceModel struct {
-	ID            types.String                `tfsdk:"id"`
-	ETag          types.String                `tfsdk:"etag"`
-	Providers     map[string]providerEntry    `tfsdk:"providers"`
-	Grants        []grantEntry                `tfsdk:"grants"`
-	Quotas        map[string]quotaEntry       `tfsdk:"quotas"`
-	Hooks         map[string]hookEntry        `tfsdk:"hooks"`
-	AutoCostBasis types.Bool                  `tfsdk:"auto_cost_basis"`
+	ID            types.String             `tfsdk:"id"`
+	ETag          types.String             `tfsdk:"etag"`
+	Providers     map[string]providerEntry `tfsdk:"providers"`
+	Grants        []grantEntry             `tfsdk:"grants"`
+	Quotas        map[string]quotaEntry    `tfsdk:"quotas"`
+	Hooks         map[string]hookEntry     `tfsdk:"hooks"`
+	AutoCostBasis types.Bool               `tfsdk:"auto_cost_basis"`
 }
 
 type providerEntry struct {
