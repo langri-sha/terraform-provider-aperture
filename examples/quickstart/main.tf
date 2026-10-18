@@ -70,8 +70,8 @@ provider "aperture" {
 resource "aperture_config" "main" {
   providers = {
     openai = {
-      baseurl = "https://api.openai.com/v1"
-      models  = ["openai/gpt-5.5"]
+      baseurl = "https://api.openai.com"
+      models  = ["gpt-5.5"]
       apikey  = var.openai_api_key
     }
   }
