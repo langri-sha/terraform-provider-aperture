@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-18
+
+### Breaking Changes
+
+- Quota `capacity` and `rate` are dollar strings (`"$10.00"`, `"$5.00/day"`)
+  instead of numbers, and `on_exceed` accepts only `"reject"`, as the gateway
+  requires.
+- Provider `add_headers` is a list of `"Header-Name: value"` strings instead of
+  a map.
+- `apikey` is never read from the gateway, which redacts it. After an import it
+  is null in state. An apply that would overwrite an `apikey` the gateway holds
+  for a provider or hook, while the configuration sets none, fails with
+  `aperture credential not managed`; set `apikey` or remove the provider or
+  hook.
+- `authorization` is no longer marked sensitive and is read back from the
+  gateway.
+
+### Added
+
+- Writes overlay the configuration onto the gateway's current document, so
+  keys the provider does not model keep the gateway's value at any depth.
+  Importing a gateway and applying no longer deletes `auth_mode`,
+  `compatibility`, `connectors` or whatever Aperture adds next.
+- Provider `auth_mode`, `compatibility` and `model_cost_map`.
+- Grant `dst`, and the capabilities `connectors`, `quotas`, `send_hooks`,
+  `add_headers`, `filterable_headers`, `enable_portal`, `read_metrics`,
+  `set_cors` and `cors_paths`.
+- `exporters`, `database`, `connectors`, `chat_models`, `flags`, `mcp` and
+  `temp_grants` as JSON attributes, left alone while unset.
+- Guides for Claude Code, Codex and importing an existing gateway.
+
 ### Fixed
 
 - The provider accepts `http://` endpoints again. Aperture serves its admin API
@@ -18,6 +49,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scheme is still rejected, as is an endpoint whose path doesn't end in
   `/aperture`. The redirect-following, response-size, and TLS 1.3 minimum
   hardening from 0.2.1 is unchanged.
+- Importing a gateway whose grants carry a capability with neither `role` nor
+  `models`, such as `{"connectors": ["aperture/**"]}`, no longer fails.
+- Updates no longer fail with an inconsistent result after apply: the `etag`
+  changes on every write.
+- A provider without `add_headers` no longer plans a change from an empty list
+  to null.
+
+### Upgrade Notes
+
+Quote quota amounts and write `add_headers` as a list. Declare an `apikey` for
+each provider or hook that holds one, or remove it, before the first apply
+after upgrading; `terraform plan` works without them.
 
 ## [0.3.1] — 2026-06-03
 
