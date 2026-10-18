@@ -26,6 +26,12 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: v1.16.6
+          terraform_wrapper: false
+
       - name: Verify go.mod is tidy
         run: |
           go mod tidy
