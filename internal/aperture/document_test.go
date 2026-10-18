@@ -210,3 +210,19 @@ func TestCredentialsListsNonEmptyAPIKeys(t *testing.T) {
 		t.Errorf("got %v, want %v", got, want)
 	}
 }
+
+func TestApplyKeepsPreservedSectionsTheConfigOmitsAndReplacesThoseItSets(t *testing.T) {
+	d, err := ParseDocument(`{"exporters": {"a": 1}, "database": {"b": 2}, "flags": {"f": {"value": true}}}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := d.Apply(&Config{Database: json.RawMessage(`{"c": 3}`)}); err != nil {
+		t.Fatal(err)
+	}
+
+	want := tree(t, `{"exporters": {"a": 1}, "database": {"c": 3}, "flags": {"f": {"value": true}}}`)
+	if got := rendered(t, d); !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v", got)
+	}
+}

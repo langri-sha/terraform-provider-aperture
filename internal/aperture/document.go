@@ -20,6 +20,9 @@ import (
 // models are set from it (or removed when it omits them), every other key
 // is left exactly as the gateway sent it, at any depth.
 //
+// A field tagged `aperture:"preserve"` is also left alone when the Config
+// omits it, for sections the Config carries only when asked to.
+//
 // An empty string stands for "not set" in the typed Config, so a key the
 // gateway holds as "" is left alone when the Config omits it.
 //
@@ -160,6 +163,9 @@ func overlayStruct(base, desired map[string]any, t reflect.Type) map[string]any 
 		}
 		v, ok := desired[name]
 		if !ok {
+			if f.Tag.Get("aperture") == "preserve" {
+				continue
+			}
 			if prior, isString := base[name].(string); !isString || prior != "" {
 				delete(out, name)
 			}
