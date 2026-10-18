@@ -2,9 +2,11 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -37,6 +39,13 @@ type configResourceModel struct {
 	Quotas        map[string]quotaEntry    `tfsdk:"quotas"`
 	Hooks         map[string]hookEntry     `tfsdk:"hooks"`
 	AutoCostBasis types.Bool               `tfsdk:"auto_cost_basis"`
+	Exporters     jsontypes.Normalized     `tfsdk:"exporters"`
+	Database      jsontypes.Normalized     `tfsdk:"database"`
+	Connectors    jsontypes.Normalized     `tfsdk:"connectors"`
+	ChatModels    jsontypes.Normalized     `tfsdk:"chat_models"`
+	Flags         jsontypes.Normalized     `tfsdk:"flags"`
+	MCP           jsontypes.Normalized     `tfsdk:"mcp"`
+	TempGrants    jsontypes.Normalized     `tfsdk:"temp_grants"`
 }
 
 type providerEntry struct {
@@ -271,6 +280,13 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"auto_cost_basis": schema.BoolAttribute{Optional: true},
+			"exporters":       opaqueSectionAttribute("LLM session log export configuration, as JSON (use jsonencode)."),
+			"database":        opaqueSectionAttribute("Data storage and capture retention settings, as JSON (use jsonencode)."),
+			"connectors":      opaqueSectionAttribute("Outbound integrations (MCP servers and HTTP APIs), as JSON (use jsonencode)."),
+			"chat_models":     opaqueSectionAttribute("Models offered in the built-in chat, as JSON (use jsonencode)."),
+			"flags":           opaqueSectionAttribute("Experimental feature flags, as JSON (use jsonencode)."),
+			"mcp":             opaqueSectionAttribute("Deprecated MCP server proxying configuration, as JSON. Use connectors instead."),
+			"temp_grants":     opaqueSectionAttribute("Deprecated access control syntax, as JSON. Use grants instead."),
 		},
 	}
 }
@@ -320,6 +336,7 @@ func (r *configResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 	state := fromAPIConfig(doc)
 	preserveSensitiveFromPrior(&state, &prior)
+	leaveUnmanagedSectionsNull(&state, &prior)
 	state.ID = types.StringValue(singletonID)
 	state.ETag = types.StringValue(etag)
 
@@ -600,6 +617,17 @@ func toAPIConfig(m *configResourceModel) (*aperture.Config, error) {
 		out.AutoCostBasis = &v
 	}
 
+	for _, s := range opaqueSections {
+		a := s.attr(m)
+		if a.IsNull() || a.IsUnknown() {
+			continue
+		}
+		if !json.Valid([]byte(a.ValueString())) {
+			return nil, fmt.Errorf("a JSON section is not valid JSON: %s", a.ValueString())
+		}
+		*s.raw(out) = json.RawMessage(a.ValueString())
+	}
+
 	return out, nil
 }
 
@@ -678,6 +706,11 @@ func fromAPIConfig(c *aperture.Config) configResourceModel {
 	}
 	if c.AutoCostBasis != nil {
 		m.AutoCostBasis = types.BoolValue(*c.AutoCostBasis)
+	}
+	for _, s := range opaqueSections {
+		if raw := *s.raw(c); len(raw) > 0 {
+			*s.attr(&m) = jsontypes.NewNormalizedValue(string(raw))
+		}
 	}
 	return m
 }
@@ -856,4 +889,41 @@ func sendHooksFromAPI(in []aperture.SendHook) []sendHookEntry {
 		out = append(out, sendHookEntry{Name: types.StringValue(h.Name), Events: typedListFromStrings(h.Events), Send: typedListFromStrings(h.Send)})
 	}
 	return out
+}
+
+func opaqueSectionAttribute(description string) schema.Attribute {
+	return schema.StringAttribute{
+		Optional:   true,
+		CustomType: jsontypes.NormalizedType{},
+		Description: description + " Left unset, the gateway's section is neither read nor changed;" +
+			" once set, it replaces the whole section, and removing it from the configuration leaves the section as it is.",
+	}
+}
+
+// opaqueSection ties a JSON section of the model to its field in the wire
+// form.
+type opaqueSection struct {
+	attr func(*configResourceModel) *jsontypes.Normalized
+	raw  func(*aperture.Config) *json.RawMessage
+}
+
+var opaqueSections = []opaqueSection{
+	{func(m *configResourceModel) *jsontypes.Normalized { return &m.Exporters }, func(c *aperture.Config) *json.RawMessage { return &c.Exporters }},
+	{func(m *configResourceModel) *jsontypes.Normalized { return &m.Database }, func(c *aperture.Config) *json.RawMessage { return &c.Database }},
+	{func(m *configResourceModel) *jsontypes.Normalized { return &m.Connectors }, func(c *aperture.Config) *json.RawMessage { return &c.Connectors }},
+	{func(m *configResourceModel) *jsontypes.Normalized { return &m.ChatModels }, func(c *aperture.Config) *json.RawMessage { return &c.ChatModels }},
+	{func(m *configResourceModel) *jsontypes.Normalized { return &m.Flags }, func(c *aperture.Config) *json.RawMessage { return &c.Flags }},
+	{func(m *configResourceModel) *jsontypes.Normalized { return &m.MCP }, func(c *aperture.Config) *json.RawMessage { return &c.MCP }},
+	{func(m *configResourceModel) *jsontypes.Normalized { return &m.TempGrants }, func(c *aperture.Config) *json.RawMessage { return &c.TempGrants }},
+}
+
+// leaveUnmanagedSectionsNull nulls the JSON sections that prior state does
+// not manage, so a section nobody declared reads back as unset rather
+// than as a diff.
+func leaveUnmanagedSectionsNull(server, prior *configResourceModel) {
+	for _, s := range opaqueSections {
+		if s.attr(prior).IsNull() {
+			*s.attr(server) = jsontypes.NewNormalizedNull()
+		}
+	}
 }
