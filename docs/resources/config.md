@@ -115,7 +115,7 @@ Required:
 Optional:
 
 - `apikey` (String, Sensitive)
-- `authorization` (String, Sensitive)
+- `authorization` (String) How the credential is sent: bearer, x-api-key, x-goog-api-key, hec or cf-aig-authorization.
 - `disabled` (Boolean)
 - `fail_policy` (String)
 - `preference` (Number)
@@ -134,7 +134,7 @@ Optional:
 
 - `add_headers` (List of String, Sensitive) Headers added to every upstream request, each as "Header-Name: value".
 - `apikey` (String, Sensitive)
-- `authorization` (String, Sensitive)
+- `authorization` (String) How the credential is sent: bearer, x-api-key, x-goog-api-key, hec or cf-aig-authorization.
 - `cost_basis` (String)
 - `description` (String)
 - `disabled` (Boolean)
