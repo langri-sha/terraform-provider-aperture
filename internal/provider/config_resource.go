@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -277,6 +278,9 @@ func (r *configResource) applyPlan(ctx context.Context, plan *configResourceMode
 		diags.AddError("render aperture config", err.Error())
 		return false
 	}
+	if !checkCredentialsManaged(doc, cfg, diags) {
+		return false
+	}
 	if err := doc.Apply(cfg); err != nil {
 		diags.AddError("render aperture config", err.Error())
 		return false
@@ -311,6 +315,34 @@ func (r *configResource) applyPlan(ctx context.Context, plan *configResourceMode
 	plan.ID = types.StringValue(singletonID)
 	plan.ETag = types.StringValue(newEtag)
 	return true
+}
+
+// checkCredentialsManaged fails when applying cfg would overwrite an
+// apikey the gateway holds that cfg does not set. The gateway redacts
+// apikeys on read, so the provider cannot keep one by writing back what it
+// read, and omitting it would delete the key.
+func checkCredentialsManaged(doc *aperture.Document, cfg *aperture.Config, diags *diag.Diagnostics) bool {
+	ok := true
+	for _, c := range doc.Credentials() {
+		var planned string
+		var present bool
+		switch c.Section {
+		case "providers":
+			p, found := cfg.Providers[c.Name]
+			planned, present = p.APIKey, found
+		case "hooks":
+			h, found := cfg.Hooks[c.Name]
+			planned, present = h.APIKey, found
+		}
+		if present && planned == "" {
+			ok = false
+			diags.AddError(
+				"aperture credential not managed",
+				fmt.Sprintf("The gateway holds an apikey for %s that the provider cannot read back, so it cannot keep it while applying. Set apikey in the configuration to write it, or remove %s.%s to delete it.", c, c.Section, c.Name),
+			)
+		}
+	}
+	return ok
 }
 
 const changedExternally = "Re-run `terraform apply -refresh-only` (or `terraform plan`) to pick up the latest state, then apply again."

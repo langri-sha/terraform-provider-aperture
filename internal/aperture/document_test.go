@@ -191,3 +191,22 @@ func TestParseDocumentRejectsANonObject(t *testing.T) {
 		t.Error("want an error for an array document")
 	}
 }
+
+func TestCredentialsListsNonEmptyAPIKeys(t *testing.T) {
+	d, err := ParseDocument(`{
+		"providers": {"b": {"apikey": "x"}, "a": {"apikey": ""}, "c": {}},
+		"hooks": {"h": {"apikey": "y"}, "g": {"url": "https://g.example"}}
+	}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got []string
+	for _, c := range d.Credentials() {
+		got = append(got, c.String())
+	}
+
+	if want := []string{"hooks.h.apikey", "providers.b.apikey"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
