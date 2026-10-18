@@ -62,6 +62,7 @@ type ModelCost struct {
 // https://tailscale.com/docs/aperture/how-to/grant-model-access.
 type Grant struct {
 	Src []string `json:"src"`
+	Dst []string `json:"dst,omitempty"`
 	App GrantApp `json:"app"`
 }
 
