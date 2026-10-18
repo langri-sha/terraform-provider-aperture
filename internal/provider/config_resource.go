@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -383,9 +382,6 @@ func toAPIConfig(m *configResourceModel) (*aperture.Config, error) {
 		for _, g := range m.Grants {
 			caps := make([]aperture.GrantCapability, 0, len(g.Capabilities))
 			for _, c := range g.Capabilities {
-				if c.Role.IsNull() && c.Models.IsNull() {
-					return nil, fmt.Errorf("grant capability must set role or models")
-				}
 				caps = append(caps, aperture.GrantCapability{
 					Role:   c.Role.ValueString(),
 					Models: c.Models.ValueString(),
