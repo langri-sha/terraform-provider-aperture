@@ -648,7 +648,7 @@ func fromAPIConfig(c *aperture.Config) configResourceModel {
 				ModelCostMap:  modelCostMapFromAPI(p.ModelCostMap),
 				Preference:    nullableInt64(p.Preference),
 				Disabled:      nullableBool(p.Disabled),
-				AddHeaders:    typedListFromStrings(p.AddHeaders),
+				AddHeaders:    optionalTypedList(p.AddHeaders),
 			}
 		}
 	}
