@@ -55,10 +55,13 @@ type GrantCapability struct {
 }
 
 // Quota is one entry in the top-level `quotas` map.
+//
+// Capacity is a dollar amount such as "$10.00"; Rate adds a refill period
+// such as "$5.00/day". The gateway rejects bare numbers.
 type Quota struct {
-	Capacity float64 `json:"capacity"`
-	Rate     float64 `json:"rate"`
-	OnExceed string  `json:"on_exceed,omitempty"`
+	Capacity string `json:"capacity"`
+	Rate     string `json:"rate"`
+	OnExceed string `json:"on_exceed,omitempty"`
 }
 
 // Hook is one entry in the top-level `hooks` map.

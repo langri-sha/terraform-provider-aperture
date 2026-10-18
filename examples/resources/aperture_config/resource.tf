@@ -37,9 +37,9 @@ resource "aperture_config" "main" {
 
   quotas = {
     monthly = {
-      capacity  = 100
-      rate      = 100
-      on_exceed = "block"
+      capacity  = "$100.00"
+      rate      = "$100.00/month"
+      on_exceed = "reject"
     }
   }
 

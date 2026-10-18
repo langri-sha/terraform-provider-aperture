@@ -63,9 +63,9 @@ type capabilityEntry struct {
 }
 
 type quotaEntry struct {
-	Capacity types.Float64 `tfsdk:"capacity"`
-	Rate     types.Float64 `tfsdk:"rate"`
-	OnExceed types.String  `tfsdk:"on_exceed"`
+	Capacity types.String `tfsdk:"capacity"`
+	Rate     types.String `tfsdk:"rate"`
+	OnExceed types.String `tfsdk:"on_exceed"`
 }
 
 type hookEntry struct {
@@ -139,9 +139,9 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Optional: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"capacity":  schema.Float64Attribute{Required: true},
-						"rate":      schema.Float64Attribute{Required: true},
-						"on_exceed": schema.StringAttribute{Optional: true},
+						"capacity":  schema.StringAttribute{Required: true, Description: "Maximum balance as a dollar amount, e.g. \"$10.00\"."},
+						"rate":      schema.StringAttribute{Required: true, Description: "Refill rate as a dollar amount per period (min, hour, day, week or month), e.g. \"$5.00/day\"."},
+						"on_exceed": schema.StringAttribute{Optional: true, Description: "Action when a request would overdraw the bucket. The only supported value is \"reject\"."},
 					},
 				},
 			},
@@ -402,8 +402,8 @@ func toAPIConfig(m *configResourceModel) (*aperture.Config, error) {
 		out.Quotas = make(map[string]aperture.Quota, len(m.Quotas))
 		for name, q := range m.Quotas {
 			out.Quotas[name] = aperture.Quota{
-				Capacity: q.Capacity.ValueFloat64(),
-				Rate:     q.Rate.ValueFloat64(),
+				Capacity: q.Capacity.ValueString(),
+				Rate:     q.Rate.ValueString(),
 				OnExceed: q.OnExceed.ValueString(),
 			}
 		}
@@ -486,8 +486,8 @@ func fromAPIConfig(c *aperture.Config) configResourceModel {
 		m.Quotas = make(map[string]quotaEntry, len(c.Quotas))
 		for name, q := range c.Quotas {
 			m.Quotas[name] = quotaEntry{
-				Capacity: types.Float64Value(q.Capacity),
-				Rate:     types.Float64Value(q.Rate),
+				Capacity: types.StringValue(q.Capacity),
+				Rate:     types.StringValue(q.Rate),
 				OnExceed: nullableString(q.OnExceed),
 			}
 		}
