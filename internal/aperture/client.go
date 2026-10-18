@@ -22,8 +22,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/tailscale/hujson"
 )
 
 // ErrPreconditionFailed is returned from SetConfig when the gateway's
@@ -182,20 +180,14 @@ func (c *Client) ValidateConfig(ctx context.Context, config string) (*Validation
 }
 
 // ParseConfigDocument parses a HuJSON config string returned by
-// GetConfig into the typed Config struct. HuJSON allows comments and
-// trailing commas; we strip those via hujson.Standardize before
-// json.Unmarshal so callers don't have to depend on the hujson
-// package directly.
+// GetConfig into the typed Config struct. Keys the Config does not model
+// are dropped; use ParseDocument to keep them.
 func ParseConfigDocument(s string) (*Config, error) {
-	pure, err := hujson.Standardize([]byte(s))
+	doc, err := ParseDocument(s)
 	if err != nil {
-		return nil, fmt.Errorf("aperture: standardize hujson: %w", err)
+		return nil, err
 	}
-	var cfg Config
-	if err := json.Unmarshal(pure, &cfg); err != nil {
-		return nil, fmt.Errorf("aperture: unmarshal config: %w", err)
-	}
-	return &cfg, nil
+	return doc.Config()
 }
 
 // MarshalConfigDocument returns a JSON-encoded form of the Config
