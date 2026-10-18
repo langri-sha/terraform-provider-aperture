@@ -399,3 +399,16 @@ func TestSchema_ETagMayChangeOnUpdate(t *testing.T) {
 		t.Errorf("etag keeps its prior value in the plan, but every write changes it: %v", etag.PlanModifiers)
 	}
 }
+
+func TestFromAPIConfig_ProviderWithoutAddHeadersReadsBackNull(t *testing.T) {
+	doc, err := aperture.ParseConfigDocument(`{"providers": {"a": {"baseurl": "https://a.example", "models": ["m"]}}}`)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	model := fromAPIConfig(doc)
+
+	if model.Providers["a"].AddHeaders != nil {
+		t.Errorf("add_headers = %v, want null", model.Providers["a"].AddHeaders)
+	}
+}
