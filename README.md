@@ -7,7 +7,10 @@ the AI gateway that brokers LLM requests for a tailnet.
 
 It manages Aperture's whole configuration as a single `aperture_config`
 resource, whose attributes mirror Aperture's own config keys: `providers`,
-`grants`, `quotas`, `hooks` and `auto_cost_basis`. Pre-1.0, but functional.
+`grants`, `quotas`, `hooks` and `auto_cost_basis`, with `exporters`,
+`database` and the other JSON-heavy sections as JSON attributes. Keys the
+provider does not model are left as the gateway holds them. Pre-1.0, but
+functional.
 
 ## Usage
 
@@ -16,7 +19,7 @@ terraform {
   required_providers {
     aperture = {
       source  = "langri-sha/aperture"
-      version = "~> 0.3"
+      version = "~> 0.4"
     }
   }
 }
@@ -60,8 +63,16 @@ echo 'resource "aperture_config" "main" {}' > main.tf
 terraform import aperture_config.main default
 ```
 
-API keys come back redacted, so point them at your secret store before the next
-`plan`.
+The gateway redacts API keys, so the provider never reads them. A plan after
+import is clean; an apply that would overwrite a key the gateway holds fails
+until the configuration sets it or removes its provider or hook. See
+[importing an existing gateway](./docs/guides/import-an-existing-gateway.md).
+
+## Guides
+
+- [Use Claude Code with Aperture](./docs/guides/claude-code.md)
+- [Use Codex with Aperture](./docs/guides/codex.md)
+- [Import an existing gateway](./docs/guides/import-an-existing-gateway.md)
 
 ## Contributing
 
