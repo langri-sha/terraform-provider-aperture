@@ -137,3 +137,22 @@ func TestPreserveSensitiveFromPrior(t *testing.T) {
 		t.Errorf("apikey not preserved: got %q, want %q", got, "sk-real")
 	}
 }
+
+func TestRoundTrip_QuotasAreDollarStrings(t *testing.T) {
+	in := `{"quotas": {"daily:<user>": {"capacity": "$10.00", "rate": "$5.00/day", "on_exceed": "reject"}}}`
+	doc, err := aperture.ParseConfigDocument(in)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	model := fromAPIConfig(doc)
+	out, err := toAPIConfig(&model)
+	if err != nil {
+		t.Fatalf("toAPIConfig: %v", err)
+	}
+
+	q := out.Quotas["daily:<user>"]
+	if q.Capacity != "$10.00" || q.Rate != "$5.00/day" || q.OnExceed != "reject" {
+		t.Errorf("quota changed: %+v", q)
+	}
+}
