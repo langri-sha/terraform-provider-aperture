@@ -103,7 +103,7 @@ func TestApplyPlan_RefusesToWriteOverAnExternalChange(t *testing.T) {
 	}
 }
 
-func TestApplyPlan_CreateOverlaysOntoTheExistingDocument(t *testing.T) {
+func TestApplyPlan_CreateReplacesTheProvidersTheExistingDocumentHolds(t *testing.T) {
 	fixture := gatewayFixture(t)
 	g := fakegateway.New(t, fixture)
 	plan := configResourceModel{
@@ -122,8 +122,8 @@ func TestApplyPlan_CreateOverlaysOntoTheExistingDocument(t *testing.T) {
 	if _, ok := providers["codex"]; ok {
 		t.Errorf("codex provider not removed: %v", providers)
 	}
-	if providers["anthropic"].(map[string]any)["auth_mode"] != "passthrough" {
-		t.Errorf("auth_mode lost: %v", providers["anthropic"])
+	if _, ok := providers["anthropic"].(map[string]any)["auth_mode"]; ok {
+		t.Errorf("auth_mode kept although the plan omits it: %v", providers["anthropic"])
 	}
 }
 

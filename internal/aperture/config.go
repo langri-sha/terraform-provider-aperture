@@ -20,16 +20,41 @@ type Config struct {
 
 // Provider is one entry in the top-level `providers` map.
 type Provider struct {
-	BaseURL       string   `json:"baseurl"`
-	Models        []string `json:"models"`
-	APIKey        string   `json:"apikey,omitempty"`
-	Authorization string   `json:"authorization,omitempty"`
-	Name          string   `json:"name,omitempty"`
-	Description   string   `json:"description,omitempty"`
-	CostBasis     string   `json:"cost_basis,omitempty"`
-	Preference    *int64   `json:"preference,omitempty"`
-	Disabled      *bool    `json:"disabled,omitempty"`
-	AddHeaders    []string `json:"add_headers,omitempty"`
+	BaseURL       string         `json:"baseurl"`
+	Models        []string       `json:"models"`
+	APIKey        string         `json:"apikey,omitempty"`
+	Authorization string         `json:"authorization,omitempty"`
+	AuthMode      string         `json:"auth_mode,omitempty"`
+	Name          string         `json:"name,omitempty"`
+	Description   string         `json:"description,omitempty"`
+	Compatibility *Compatibility `json:"compatibility,omitempty"`
+	CostBasis     string         `json:"cost_basis,omitempty"`
+	ModelCostMap  []ModelCost    `json:"model_cost_map,omitempty"`
+	Preference    *int64         `json:"preference,omitempty"`
+	Disabled      *bool          `json:"disabled,omitempty"`
+	AddHeaders    []string       `json:"add_headers,omitempty"`
+}
+
+// Compatibility is a provider's API compatibility flags. An unset flag
+// takes the gateway's default, which for openai_chat depends on the other
+// flags, so false and unset are different.
+type Compatibility struct {
+	OpenAIChat            *bool `json:"openai_chat,omitempty"`
+	OpenAIResponses       *bool `json:"openai_responses,omitempty"`
+	AnthropicMessages     *bool `json:"anthropic_messages,omitempty"`
+	GeminiGenerateContent *bool `json:"gemini_generate_content,omitempty"`
+	BedrockModelInvoke    *bool `json:"bedrock_model_invoke,omitempty"`
+	GoogleGenerateContent *bool `json:"google_generate_content,omitempty"`
+	GoogleRawPredict      *bool `json:"google_raw_predict,omitempty"`
+	BedrockConverse       *bool `json:"bedrock_converse,omitempty"`
+}
+
+// ModelCost maps model names that match a glob onto a known model for
+// pricing. The gateway uses the first entry that matches.
+type ModelCost struct {
+	Match      string   `json:"match"`
+	As         string   `json:"as"`
+	Adjustment *float64 `json:"adjustment,omitempty"`
 }
 
 // Grant is one entry in the top-level `grants` array. It uses

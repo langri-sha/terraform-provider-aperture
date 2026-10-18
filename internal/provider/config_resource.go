@@ -40,16 +40,36 @@ type configResourceModel struct {
 }
 
 type providerEntry struct {
-	BaseURL       types.String   `tfsdk:"baseurl"`
-	Models        []types.String `tfsdk:"models"`
-	APIKey        types.String   `tfsdk:"apikey"`
-	Authorization types.String   `tfsdk:"authorization"`
-	Name          types.String   `tfsdk:"name"`
-	Description   types.String   `tfsdk:"description"`
-	CostBasis     types.String   `tfsdk:"cost_basis"`
-	Preference    types.Int64    `tfsdk:"preference"`
-	Disabled      types.Bool     `tfsdk:"disabled"`
-	AddHeaders    []types.String `tfsdk:"add_headers"`
+	BaseURL       types.String        `tfsdk:"baseurl"`
+	Models        []types.String      `tfsdk:"models"`
+	APIKey        types.String        `tfsdk:"apikey"`
+	Authorization types.String        `tfsdk:"authorization"`
+	AuthMode      types.String        `tfsdk:"auth_mode"`
+	Name          types.String        `tfsdk:"name"`
+	Description   types.String        `tfsdk:"description"`
+	Compatibility *compatibilityEntry `tfsdk:"compatibility"`
+	CostBasis     types.String        `tfsdk:"cost_basis"`
+	ModelCostMap  []modelCostEntry    `tfsdk:"model_cost_map"`
+	Preference    types.Int64         `tfsdk:"preference"`
+	Disabled      types.Bool          `tfsdk:"disabled"`
+	AddHeaders    []types.String      `tfsdk:"add_headers"`
+}
+
+type compatibilityEntry struct {
+	OpenAIChat            types.Bool `tfsdk:"openai_chat"`
+	OpenAIResponses       types.Bool `tfsdk:"openai_responses"`
+	AnthropicMessages     types.Bool `tfsdk:"anthropic_messages"`
+	GeminiGenerateContent types.Bool `tfsdk:"gemini_generate_content"`
+	BedrockModelInvoke    types.Bool `tfsdk:"bedrock_model_invoke"`
+	GoogleGenerateContent types.Bool `tfsdk:"google_generate_content"`
+	GoogleRawPredict      types.Bool `tfsdk:"google_raw_predict"`
+	BedrockConverse       types.Bool `tfsdk:"bedrock_converse"`
+}
+
+type modelCostEntry struct {
+	Match      types.String  `tfsdk:"match"`
+	As         types.String  `tfsdk:"as"`
+	Adjustment types.Float64 `tfsdk:"adjustment"`
 }
 
 type grantEntry struct {
@@ -109,12 +129,41 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						"models":        schema.ListAttribute{ElementType: types.StringType, Required: true},
 						"apikey":        schema.StringAttribute{Optional: true, Sensitive: true},
 						"authorization": schema.StringAttribute{Optional: true, Description: "How the credential is sent: bearer, x-api-key, x-goog-api-key, hec or cf-aig-authorization."},
-						"name":          schema.StringAttribute{Optional: true},
-						"description":   schema.StringAttribute{Optional: true},
-						"cost_basis":    schema.StringAttribute{Optional: true},
-						"preference":    schema.Int64Attribute{Optional: true},
-						"disabled":      schema.BoolAttribute{Optional: true},
-						"add_headers":   schema.ListAttribute{ElementType: types.StringType, Optional: true, Sensitive: true, Description: "Headers added to every upstream request, each as \"Header-Name: value\"."},
+						"auth_mode": schema.StringAttribute{
+							Optional:    true,
+							Description: "Source of the upstream credential: \"\" or \"override\" injects apikey, \"passthrough\" forwards the client's own credential and falls back to apikey, \"none\" sends no credential.",
+						},
+						"name":        schema.StringAttribute{Optional: true},
+						"description": schema.StringAttribute{Optional: true},
+						"compatibility": schema.SingleNestedAttribute{
+							Optional:    true,
+							Description: "API formats the provider supports. A flag left unset takes the gateway's default, so set openai_chat explicitly to keep or disable it next to another flag.",
+							Attributes: map[string]schema.Attribute{
+								"openai_chat":             schema.BoolAttribute{Optional: true},
+								"openai_responses":        schema.BoolAttribute{Optional: true},
+								"anthropic_messages":      schema.BoolAttribute{Optional: true},
+								"gemini_generate_content": schema.BoolAttribute{Optional: true},
+								"bedrock_model_invoke":    schema.BoolAttribute{Optional: true},
+								"google_generate_content": schema.BoolAttribute{Optional: true},
+								"google_raw_predict":      schema.BoolAttribute{Optional: true},
+								"bedrock_converse":        schema.BoolAttribute{Optional: true},
+							},
+						},
+						"cost_basis": schema.StringAttribute{Optional: true},
+						"model_cost_map": schema.ListNestedAttribute{
+							Optional:    true,
+							Description: "Prices unknown model names as known ones. The first matching entry wins.",
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"match":      schema.StringAttribute{Required: true, Description: "Glob over the model name, in path.Match syntax."},
+									"as":         schema.StringAttribute{Required: true, Description: "Model name to price it as."},
+									"adjustment": schema.Float64Attribute{Optional: true, Description: "Price multiplier; 1.5 marks up 50%. Defaults to 1."},
+								},
+							},
+						},
+						"preference":  schema.Int64Attribute{Optional: true},
+						"disabled":    schema.BoolAttribute{Optional: true},
+						"add_headers": schema.ListAttribute{ElementType: types.StringType, Optional: true, Sensitive: true, Description: "Headers added to every upstream request, each as \"Header-Name: value\"."},
 					},
 				},
 			},
@@ -389,9 +438,14 @@ func toAPIConfig(m *configResourceModel) (*aperture.Config, error) {
 			if !p.Authorization.IsNull() {
 				ap.Authorization = p.Authorization.ValueString()
 			}
+			if !p.AuthMode.IsNull() {
+				ap.AuthMode = p.AuthMode.ValueString()
+			}
 			if !p.Name.IsNull() {
 				ap.Name = p.Name.ValueString()
 			}
+			ap.Compatibility = compatibilityToAPI(p.Compatibility)
+			ap.ModelCostMap = modelCostMapToAPI(p.ModelCostMap)
 			if !p.Description.IsNull() {
 				ap.Description = p.Description.ValueString()
 			}
@@ -489,9 +543,12 @@ func fromAPIConfig(c *aperture.Config) configResourceModel {
 				BaseURL:       types.StringValue(p.BaseURL),
 				Models:        typedListFromStrings(p.Models),
 				Authorization: nullableString(p.Authorization),
+				AuthMode:      nullableString(p.AuthMode),
 				Name:          nullableString(p.Name),
 				Description:   nullableString(p.Description),
+				Compatibility: compatibilityFromAPI(p.Compatibility),
 				CostBasis:     nullableString(p.CostBasis),
+				ModelCostMap:  modelCostMapFromAPI(p.ModelCostMap),
 				Preference:    nullableInt64(p.Preference),
 				Disabled:      nullableBool(p.Disabled),
 				AddHeaders:    typedListFromStrings(p.AddHeaders),
@@ -578,4 +635,74 @@ func nullableInt64(i *int64) types.Int64 {
 		return types.Int64Null()
 	}
 	return types.Int64Value(*i)
+}
+
+func compatibilityToAPI(c *compatibilityEntry) *aperture.Compatibility {
+	if c == nil {
+		return nil
+	}
+	flag := func(b types.Bool) *bool {
+		if b.IsNull() {
+			return nil
+		}
+		v := b.ValueBool()
+		return &v
+	}
+	return &aperture.Compatibility{
+		OpenAIChat:            flag(c.OpenAIChat),
+		OpenAIResponses:       flag(c.OpenAIResponses),
+		AnthropicMessages:     flag(c.AnthropicMessages),
+		GeminiGenerateContent: flag(c.GeminiGenerateContent),
+		BedrockModelInvoke:    flag(c.BedrockModelInvoke),
+		GoogleGenerateContent: flag(c.GoogleGenerateContent),
+		GoogleRawPredict:      flag(c.GoogleRawPredict),
+		BedrockConverse:       flag(c.BedrockConverse),
+	}
+}
+
+func compatibilityFromAPI(c *aperture.Compatibility) *compatibilityEntry {
+	if c == nil {
+		return nil
+	}
+	return &compatibilityEntry{
+		OpenAIChat:            nullableBool(c.OpenAIChat),
+		OpenAIResponses:       nullableBool(c.OpenAIResponses),
+		AnthropicMessages:     nullableBool(c.AnthropicMessages),
+		GeminiGenerateContent: nullableBool(c.GeminiGenerateContent),
+		BedrockModelInvoke:    nullableBool(c.BedrockModelInvoke),
+		GoogleGenerateContent: nullableBool(c.GoogleGenerateContent),
+		GoogleRawPredict:      nullableBool(c.GoogleRawPredict),
+		BedrockConverse:       nullableBool(c.BedrockConverse),
+	}
+}
+
+func modelCostMapToAPI(in []modelCostEntry) []aperture.ModelCost {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]aperture.ModelCost, 0, len(in))
+	for _, e := range in {
+		mc := aperture.ModelCost{Match: e.Match.ValueString(), As: e.As.ValueString()}
+		if !e.Adjustment.IsNull() {
+			v := e.Adjustment.ValueFloat64()
+			mc.Adjustment = &v
+		}
+		out = append(out, mc)
+	}
+	return out
+}
+
+func modelCostMapFromAPI(in []aperture.ModelCost) []modelCostEntry {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]modelCostEntry, 0, len(in))
+	for _, mc := range in {
+		e := modelCostEntry{Match: types.StringValue(mc.Match), As: types.StringValue(mc.As), Adjustment: types.Float64Null()}
+		if mc.Adjustment != nil {
+			e.Adjustment = types.Float64Value(*mc.Adjustment)
+		}
+		out = append(out, e)
+	}
+	return out
 }
