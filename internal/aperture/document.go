@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/tailscale/hujson"
@@ -179,4 +180,38 @@ func jsonName(f reflect.StructField) string {
 		return f.Name
 	}
 	return name
+}
+
+// Credential locates an apikey the document holds under a provider or hook.
+type Credential struct {
+	Section string // "providers" or "hooks"
+	Name    string
+}
+
+func (c Credential) String() string { return c.Section + "." + c.Name + ".apikey" }
+
+// Credentials lists the non-empty apikeys in the document, ordered by
+// section then name. A gateway redacts them on read, so any it returns
+// stands for a value the caller cannot see.
+func (d *Document) Credentials() []Credential {
+	var out []Credential
+	for _, section := range []string{"hooks", "providers"} {
+		entries, _ := d.tree[section].(map[string]any)
+		for _, name := range sortedKeys(entries) {
+			entry, _ := entries[name].(map[string]any)
+			if key, _ := entry["apikey"].(string); key != "" {
+				out = append(out, Credential{Section: section, Name: name})
+			}
+		}
+	}
+	return out
+}
+
+func sortedKeys(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

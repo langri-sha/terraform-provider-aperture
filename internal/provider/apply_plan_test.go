@@ -36,6 +36,13 @@ func planFromFixture(t *testing.T, doc string) configResourceModel {
 	return fromAPIConfig(cfg)
 }
 
+func withHookKey(m configResourceModel, key string) configResourceModel {
+	h := m.Hooks["oso"]
+	h.APIKey = types.StringValue(key)
+	m.Hooks["oso"] = h
+	return m
+}
+
 func storedTree(t *testing.T, g *fakegateway.Gateway) map[string]any {
 	t.Helper()
 	var out map[string]any
@@ -48,7 +55,7 @@ func storedTree(t *testing.T, g *fakegateway.Gateway) map[string]any {
 func TestApplyPlan_KeepsKeysTheModelDoesNotCover(t *testing.T) {
 	fixture := gatewayFixture(t)
 	g := fakegateway.New(t, fixture)
-	plan := planFromFixture(t, fixture)
+	plan := withHookKey(planFromFixture(t, fixture), "hook-key")
 	anthropic := plan.Providers["anthropic"]
 	anthropic.Models = append(anthropic.Models, types.StringValue("claude-next"))
 	plan.Providers["anthropic"] = anthropic
@@ -117,5 +124,55 @@ func TestApplyPlan_CreateOverlaysOntoTheExistingDocument(t *testing.T) {
 	}
 	if providers["anthropic"].(map[string]any)["auth_mode"] != "passthrough" {
 		t.Errorf("auth_mode lost: %v", providers["anthropic"])
+	}
+}
+
+func TestApplyPlan_RefusesToDropACredentialItCannotSee(t *testing.T) {
+	fixture := gatewayFixture(t)
+	g := fakegateway.New(t, fixture)
+	plan := planFromFixture(t, fixture)
+
+	var diags diag.Diagnostics
+	if resourceFor(g).applyPlan(context.Background(), &plan, "", &diags) {
+		t.Fatal("applyPlan overwrote a credential it cannot see")
+	}
+
+	if len(g.Writes()) != 0 {
+		t.Errorf("gateway was written: %v", g.Writes())
+	}
+	if !strings.Contains(diags[0].Detail(), "hooks.oso.apikey") {
+		t.Errorf("diagnostic does not name the credential: %v", diags)
+	}
+}
+
+func TestApplyPlan_WritesTheConfiguredAPIKeyNeverTheMarker(t *testing.T) {
+	fixture := gatewayFixture(t)
+	g := fakegateway.New(t, fixture)
+	plan := withHookKey(planFromFixture(t, fixture), "configured-key")
+
+	var diags diag.Diagnostics
+	if !resourceFor(g).applyPlan(context.Background(), &plan, "", &diags) {
+		t.Fatalf("applyPlan: %v", diags)
+	}
+
+	hook := storedTree(t, g)["hooks"].(map[string]any)["oso"].(map[string]any)
+	if hook["apikey"] != "configured-key" {
+		t.Errorf("hook apikey = %v", hook["apikey"])
+	}
+}
+
+func TestApplyPlan_AllowsRemovingAHookThatHoldsACredential(t *testing.T) {
+	fixture := gatewayFixture(t)
+	g := fakegateway.New(t, fixture)
+	plan := planFromFixture(t, fixture)
+	plan.Hooks = nil
+
+	var diags diag.Diagnostics
+	if !resourceFor(g).applyPlan(context.Background(), &plan, "", &diags) {
+		t.Fatalf("applyPlan: %v", diags)
+	}
+
+	if _, ok := storedTree(t, g)["hooks"]; ok {
+		t.Errorf("hooks kept: %v", storedTree(t, g)["hooks"])
 	}
 }
