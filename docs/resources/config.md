@@ -77,10 +77,17 @@ resource "aperture_config" "main" {
 ### Optional
 
 - `auto_cost_basis` (Boolean)
+- `chat_models` (String) Models offered in the built-in chat, as JSON (use jsonencode). Left unset, the gateway's section is neither read nor changed; once set, it replaces the whole section, and removing it from the configuration leaves the section as it is.
+- `connectors` (String) Outbound integrations (MCP servers and HTTP APIs), as JSON (use jsonencode). Left unset, the gateway's section is neither read nor changed; once set, it replaces the whole section, and removing it from the configuration leaves the section as it is.
+- `database` (String) Data storage and capture retention settings, as JSON (use jsonencode). Left unset, the gateway's section is neither read nor changed; once set, it replaces the whole section, and removing it from the configuration leaves the section as it is.
+- `exporters` (String) LLM session log export configuration, as JSON (use jsonencode). Left unset, the gateway's section is neither read nor changed; once set, it replaces the whole section, and removing it from the configuration leaves the section as it is.
+- `flags` (String) Experimental feature flags, as JSON (use jsonencode). Left unset, the gateway's section is neither read nor changed; once set, it replaces the whole section, and removing it from the configuration leaves the section as it is.
 - `grants` (Attributes List) (see [below for nested schema](#nestedatt--grants))
 - `hooks` (Attributes Map) (see [below for nested schema](#nestedatt--hooks))
+- `mcp` (String) Deprecated MCP server proxying configuration, as JSON. Use connectors instead. Left unset, the gateway's section is neither read nor changed; once set, it replaces the whole section, and removing it from the configuration leaves the section as it is.
 - `providers` (Attributes Map) LLM provider configurations, keyed by provider name (openai, anthropic, google, ...). (see [below for nested schema](#nestedatt--providers))
 - `quotas` (Attributes Map) (see [below for nested schema](#nestedatt--quotas))
+- `temp_grants` (String) Deprecated access control syntax, as JSON. Use grants instead. Left unset, the gateway's section is neither read nor changed; once set, it replaces the whole section, and removing it from the configuration leaves the section as it is.
 
 ### Read-Only
 
@@ -95,13 +102,48 @@ Required:
 - `capabilities` (Attributes List) (see [below for nested schema](#nestedatt--grants--capabilities))
 - `src` (List of String)
 
+Optional:
+
+- `dst` (List of String) Destinations, needed only when the grant is meant to be copied into a tailnet policy file.
+
 <a id="nestedatt--grants--capabilities"></a>
 ### Nested Schema for `grants.capabilities`
 
 Optional:
 
+- `add_headers` (List of String, Sensitive) Headers prepended to upstream requests when the grant matches, each as "Header-Name: value".
+- `connectors` (List of String) Connector access, as globs in connectorID/category/resource form or label:<name>, e.g. aperture/**.
+- `cors_paths` (List of String) URL path globs that activate CORS headers, e.g. /v1/**.
+- `enable_portal` (Boolean) Access to the web portal, available by default. Set false to disable it for this grant.
+- `filterable_headers` (List of String) Indexed header names matched users can filter dashboards by; ["*"] grants every configured one.
 - `models` (String) Glob in provider/model form, e.g. anthropic/**
+- `quotas` (Attributes List) Quota buckets charged when the grant matches. A bucket takes effect only when a grant attaches it. (see [below for nested schema](#nestedatt--grants--capabilities--quotas))
+- `read_metrics` (Boolean) Access to the /metrics Prometheus endpoint.
 - `role` (String) user | admin
+- `send_hooks` (Attributes List) Hooks the grant triggers. A hook in the top-level hooks does nothing until a grant sends to it. (see [below for nested schema](#nestedatt--grants--capabilities--send_hooks))
+- `set_cors` (Boolean) Inject CORS response headers; needs cors_paths.
+
+<a id="nestedatt--grants--capabilities--quotas"></a>
+### Nested Schema for `grants.capabilities.quotas`
+
+Required:
+
+- `bucket` (String) Name of a bucket in the top-level quotas, templates included, e.g. daily:<user>.
+
+Optional:
+
+- `overdrafts` (List of String) Buckets to borrow from, in order, when this one is exhausted.
+
+
+<a id="nestedatt--grants--capabilities--send_hooks"></a>
+### Nested Schema for `grants.capabilities.send_hooks`
+
+Required:
+
+- `events` (List of String) pre_request, entire_request or tool_call_entire_request.
+- `name` (String) Key of a hook in the top-level hooks.
+- `send` (List of String) Data to include: tools, user_message, request_body, response_body, raw_responses or quotas.
+
 
 
 
@@ -134,12 +176,43 @@ Optional:
 
 - `add_headers` (List of String, Sensitive) Headers added to every upstream request, each as "Header-Name: value".
 - `apikey` (String, Sensitive)
+- `auth_mode` (String) Source of the upstream credential: "" or "override" injects apikey, "passthrough" forwards the client's own credential and falls back to apikey, "none" sends no credential.
 - `authorization` (String) How the credential is sent: bearer, x-api-key, x-goog-api-key, hec or cf-aig-authorization.
+- `compatibility` (Attributes) API formats the provider supports. A flag left unset takes the gateway's default, so set openai_chat explicitly to keep or disable it next to another flag. (see [below for nested schema](#nestedatt--providers--compatibility))
 - `cost_basis` (String)
 - `description` (String)
 - `disabled` (Boolean)
+- `model_cost_map` (Attributes List) Prices unknown model names as known ones. The first matching entry wins. (see [below for nested schema](#nestedatt--providers--model_cost_map))
 - `name` (String)
 - `preference` (Number)
+
+<a id="nestedatt--providers--compatibility"></a>
+### Nested Schema for `providers.compatibility`
+
+Optional:
+
+- `anthropic_messages` (Boolean)
+- `bedrock_converse` (Boolean)
+- `bedrock_model_invoke` (Boolean)
+- `gemini_generate_content` (Boolean)
+- `google_generate_content` (Boolean)
+- `google_raw_predict` (Boolean)
+- `openai_chat` (Boolean)
+- `openai_responses` (Boolean)
+
+
+<a id="nestedatt--providers--model_cost_map"></a>
+### Nested Schema for `providers.model_cost_map`
+
+Required:
+
+- `as` (String) Model name to price it as.
+- `match` (String) Glob over the model name, in path.Match syntax.
+
+Optional:
+
+- `adjustment` (Number) Price multiplier; 1.5 marks up 50%. Defaults to 1.
+
 
 
 <a id="nestedatt--quotas"></a>
