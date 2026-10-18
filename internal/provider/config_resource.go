@@ -107,7 +107,7 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 						"baseurl":       schema.StringAttribute{Required: true},
 						"models":        schema.ListAttribute{ElementType: types.StringType, Required: true},
 						"apikey":        schema.StringAttribute{Optional: true, Sensitive: true},
-						"authorization": schema.StringAttribute{Optional: true, Sensitive: true},
+						"authorization": schema.StringAttribute{Optional: true, Description: "How the credential is sent: bearer, x-api-key, x-goog-api-key, hec or cf-aig-authorization."},
 						"name":          schema.StringAttribute{Optional: true},
 						"description":   schema.StringAttribute{Optional: true},
 						"cost_basis":    schema.StringAttribute{Optional: true},
@@ -150,7 +150,7 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 					Attributes: map[string]schema.Attribute{
 						"url":           schema.StringAttribute{Required: true},
 						"apikey":        schema.StringAttribute{Optional: true, Sensitive: true},
-						"authorization": schema.StringAttribute{Optional: true, Sensitive: true},
+						"authorization": schema.StringAttribute{Optional: true, Description: "How the credential is sent: bearer, x-api-key, x-goog-api-key, hec or cf-aig-authorization."},
 						"timeout":       schema.StringAttribute{Optional: true},
 						"disabled":      schema.BoolAttribute{Optional: true},
 						"fail_policy":   schema.StringAttribute{Optional: true},
@@ -326,9 +326,6 @@ func preserveSensitiveFromPrior(server, prior *configResourceModel) {
 			if !pp.APIKey.IsNull() {
 				sp.APIKey = pp.APIKey
 			}
-			if !pp.Authorization.IsNull() {
-				sp.Authorization = pp.Authorization
-			}
 			if len(pp.AddHeaders) > 0 {
 				sp.AddHeaders = pp.AddHeaders
 			}
@@ -339,9 +336,6 @@ func preserveSensitiveFromPrior(server, prior *configResourceModel) {
 		if ph, ok := prior.Hooks[name]; ok {
 			if !ph.APIKey.IsNull() {
 				sh.APIKey = ph.APIKey
-			}
-			if !ph.Authorization.IsNull() {
-				sh.Authorization = ph.Authorization
 			}
 			server.Hooks[name] = sh
 		}
