@@ -72,12 +72,20 @@ type GrantApp struct {
 	Aperture []GrantCapability `json:"tailscale.com/cap/aperture"`
 }
 
-// GrantCapability is one capability entry. Upstream allows either
-// {role: ...} or {models: ...} per entry; we model both as
-// optional pointers and let the marshaller omit absent fields.
+// GrantCapability is one capability entry. Each entry sets whichever of
+// these a grant needs; the marshaller omits the rest. The CORS response
+// header fields (Access-Control-Allow-*) are not modelled, and are kept
+// as the gateway holds them.
 type GrantCapability struct {
-	Role   string `json:"role,omitempty"`
-	Models string `json:"models,omitempty"`
+	Role              string   `json:"role,omitempty"`
+	Models            string   `json:"models,omitempty"`
+	Connectors        []string `json:"connectors,omitempty"`
+	AddHeaders        []string `json:"add_headers,omitempty"`
+	FilterableHeaders []string `json:"filterable_headers,omitempty"`
+	EnablePortal      *bool    `json:"enable_portal,omitempty"`
+	ReadMetrics       *bool    `json:"read_metrics,omitempty"`
+	SetCORS           *bool    `json:"set_cors,omitempty"`
+	CORSPaths         []string `json:"cors_paths,omitempty"`
 }
 
 // Quota is one entry in the top-level `quotas` map.

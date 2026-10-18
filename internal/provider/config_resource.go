@@ -79,8 +79,15 @@ type grantEntry struct {
 }
 
 type capabilityEntry struct {
-	Role   types.String `tfsdk:"role"`
-	Models types.String `tfsdk:"models"`
+	Role              types.String   `tfsdk:"role"`
+	Models            types.String   `tfsdk:"models"`
+	Connectors        []types.String `tfsdk:"connectors"`
+	AddHeaders        []types.String `tfsdk:"add_headers"`
+	FilterableHeaders []types.String `tfsdk:"filterable_headers"`
+	EnablePortal      types.Bool     `tfsdk:"enable_portal"`
+	ReadMetrics       types.Bool     `tfsdk:"read_metrics"`
+	SetCORS           types.Bool     `tfsdk:"set_cors"`
+	CORSPaths         []types.String `tfsdk:"cors_paths"`
 }
 
 type quotaEntry struct {
@@ -180,6 +187,25 @@ func (r *configResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 								Attributes: map[string]schema.Attribute{
 									"role":   schema.StringAttribute{Optional: true, Description: "user | admin"},
 									"models": schema.StringAttribute{Optional: true, Description: "Glob in provider/model form, e.g. anthropic/**"},
+									"connectors": schema.ListAttribute{
+										ElementType: types.StringType, Optional: true,
+										Description: "Connector access, as globs in connectorID/category/resource form or label:<name>, e.g. aperture/**.",
+									},
+									"add_headers": schema.ListAttribute{
+										ElementType: types.StringType, Optional: true, Sensitive: true,
+										Description: "Headers prepended to upstream requests when the grant matches, each as \"Header-Name: value\".",
+									},
+									"filterable_headers": schema.ListAttribute{
+										ElementType: types.StringType, Optional: true,
+										Description: "Indexed header names matched users can filter dashboards by; [\"*\"] grants every configured one.",
+									},
+									"enable_portal": schema.BoolAttribute{Optional: true, Description: "Access to the web portal, available by default. Set false to disable it for this grant."},
+									"read_metrics":  schema.BoolAttribute{Optional: true, Description: "Access to the /metrics Prometheus endpoint."},
+									"set_cors":      schema.BoolAttribute{Optional: true, Description: "Inject CORS response headers; needs cors_paths."},
+									"cors_paths": schema.ListAttribute{
+										ElementType: types.StringType, Optional: true,
+										Description: "URL path globs that activate CORS headers, e.g. /v1/**.",
+									},
 								},
 							},
 						},
@@ -475,8 +501,15 @@ func toAPIConfig(m *configResourceModel) (*aperture.Config, error) {
 			caps := make([]aperture.GrantCapability, 0, len(g.Capabilities))
 			for _, c := range g.Capabilities {
 				caps = append(caps, aperture.GrantCapability{
-					Role:   c.Role.ValueString(),
-					Models: c.Models.ValueString(),
+					Role:              c.Role.ValueString(),
+					Models:            c.Models.ValueString(),
+					Connectors:        optionalStrings(c.Connectors),
+					AddHeaders:        optionalStrings(c.AddHeaders),
+					FilterableHeaders: optionalStrings(c.FilterableHeaders),
+					EnablePortal:      boolPointer(c.EnablePortal),
+					ReadMetrics:       boolPointer(c.ReadMetrics),
+					SetCORS:           boolPointer(c.SetCORS),
+					CORSPaths:         optionalStrings(c.CORSPaths),
 				})
 			}
 			out.Grants = append(out.Grants, aperture.Grant{
@@ -564,8 +597,15 @@ func fromAPIConfig(c *aperture.Config) configResourceModel {
 			caps := make([]capabilityEntry, 0, len(g.App.Aperture))
 			for _, cap := range g.App.Aperture {
 				caps = append(caps, capabilityEntry{
-					Role:   nullableString(cap.Role),
-					Models: nullableString(cap.Models),
+					Role:              nullableString(cap.Role),
+					Models:            nullableString(cap.Models),
+					Connectors:        optionalTypedList(cap.Connectors),
+					AddHeaders:        optionalTypedList(cap.AddHeaders),
+					FilterableHeaders: optionalTypedList(cap.FilterableHeaders),
+					EnablePortal:      nullableBool(cap.EnablePortal),
+					ReadMetrics:       nullableBool(cap.ReadMetrics),
+					SetCORS:           nullableBool(cap.SetCORS),
+					CORSPaths:         optionalTypedList(cap.CORSPaths),
 				})
 			}
 			m.Grants = append(m.Grants, grantEntry{
@@ -726,4 +766,12 @@ func optionalTypedList(in []string) []types.String {
 		return nil
 	}
 	return typedListFromStrings(in)
+}
+
+func boolPointer(b types.Bool) *bool {
+	if b.IsNull() {
+		return nil
+	}
+	v := b.ValueBool()
+	return &v
 }

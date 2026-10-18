@@ -280,3 +280,39 @@ func TestRoundTrip_GrantDestination(t *testing.T) {
 		t.Errorf("absent dst must read back as null, got %v", model.Grants[1].Dst)
 	}
 }
+
+func TestRoundTrip_GrantCapabilityFields(t *testing.T) {
+	in := `{"grants": [{"src": ["*"], "app": {"tailscale.com/cap/aperture": [
+		{"connectors": ["aperture/**", "label:system"]},
+		{"add_headers": ["X-Team: platform"], "filterable_headers": ["*"]},
+		{"enable_portal": false, "read_metrics": true},
+		{"set_cors": true, "cors_paths": ["/v1/**"]}
+	]}}]}`
+	doc, err := aperture.ParseConfigDocument(in)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	model := fromAPIConfig(doc)
+	out, err := toAPIConfig(&model)
+	if err != nil {
+		t.Fatalf("toAPIConfig: %v", err)
+	}
+
+	caps := out.Grants[0].App.Aperture
+	if len(caps[0].Connectors) != 2 || caps[0].Connectors[1] != "label:system" {
+		t.Errorf("connectors = %v", caps[0].Connectors)
+	}
+	if caps[1].AddHeaders[0] != "X-Team: platform" || caps[1].FilterableHeaders[0] != "*" {
+		t.Errorf("headers = %+v", caps[1])
+	}
+	if caps[2].EnablePortal == nil || *caps[2].EnablePortal || caps[2].ReadMetrics == nil || !*caps[2].ReadMetrics {
+		t.Errorf("flags = %+v", caps[2])
+	}
+	if caps[3].SetCORS == nil || !*caps[3].SetCORS || caps[3].CORSPaths[0] != "/v1/**" {
+		t.Errorf("cors = %+v", caps[3])
+	}
+	if model.Grants[0].Capabilities[2].Connectors != nil {
+		t.Errorf("absent connectors must read back as null")
+	}
+}

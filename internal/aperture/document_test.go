@@ -67,7 +67,7 @@ func TestApplyKeepsKeysTheConfigDoesNotModel(t *testing.T) {
 
 func TestApplyKeepsUnmodelledKeysOfElementsAtTheSamePosition(t *testing.T) {
 	d, err := ParseDocument(`{"grants": [
-		{"src": ["a"], "app": {"tailscale.com/cap/aperture": [{"role": "user", "connectors": ["x"]}, {"models": "**", "connectors": ["y"]}]}}
+		{"src": ["a"], "app": {"tailscale.com/cap/aperture": [{"role": "user", "enable_chat_ui": true}, {"models": "**", "enable_chat_ui": false}]}}
 	]}`)
 	if err != nil {
 		t.Fatal(err)
@@ -82,7 +82,7 @@ func TestApplyKeepsUnmodelledKeysOfElementsAtTheSamePosition(t *testing.T) {
 	}
 
 	want := tree(t, `{"grants": [
-		{"src": ["b"], "app": {"tailscale.com/cap/aperture": [{"role": "admin", "connectors": ["x"]}, {"models": "anthropic/**", "connectors": ["y"]}]}}
+		{"src": ["b"], "app": {"tailscale.com/cap/aperture": [{"role": "admin", "enable_chat_ui": true}, {"models": "anthropic/**", "enable_chat_ui": false}]}}
 	]}`)
 	if got := rendered(t, d); !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v", got)
