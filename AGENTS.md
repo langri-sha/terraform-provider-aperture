@@ -32,16 +32,20 @@ gateway. Modeled in HCL as `resource "aperture_config" "main"`.
 Top-level keys (mirror upstream verbatim — do not rename):
 
 - `providers` — map of LLM provider configs (`baseurl`, `models[]`,
-  `apikey`, `authorization`, `name`, `description`, `cost_basis`,
-  `preference`, `disabled`, `add_headers`).
-- `grants[]` — Tailscale grant entries: `src[]` and
-  `app["tailscale.com/cap/aperture"][]` capabilities (`role`,
-  `models`).
-- `quotas` — token-bucket spend limits (`capacity`, `rate`,
+  `apikey`, `authorization`, `auth_mode`, `compatibility`, `name`,
+  `description`, `cost_basis`, `model_cost_map`, `preference`, `disabled`,
+  `add_headers[]`).
+- `grants[]` — Tailscale grant entries: `src[]`, `dst[]` and
+  `app["tailscale.com/cap/aperture"][]` capabilities (`role`, `models`,
+  `connectors`, `quotas`, `send_hooks`, `add_headers`, `enable_portal`,
+  `read_metrics`, `set_cors`, ...).
+- `quotas` — spend limits as dollar strings (`capacity`, `rate`,
   `on_exceed`).
 - `hooks` — webhook configs (`url`, `apikey`, `authorization`,
   `timeout`, `disabled`, `fail_policy`, `preference`).
 - `auto_cost_basis` — boolean.
+- `exporters`, `database`, `connectors`, `chat_models`, `flags`, `mcp`,
+  `temp_grants` — carried as JSON attributes.
 
 Don't invent fields. If upstream doesn't document it, leave it out.
 
@@ -59,13 +63,23 @@ Don't invent fields. If upstream doesn't document it, leave it out.
   possible so users can cross-reference Aperture docs without
   translation.
 
-## Sensitive-field handling
+## Writes and credentials
 
-`GET /config` returns redacted apikeys. The Read method calls
-`preserveSensitiveFromPrior` to keep the user-supplied values from
-state instead of overwriting with the redaction marker. If you add a
-new sensitive field to the schema, update the merge function or the
-provider will leak redacted values into `terraform plan` output.
+An apply overlays the plan onto the gateway's current document
+(`aperture.Document.Apply`), so a key the provider does not model keeps the
+gateway's value. A field you add to the typed structs becomes managed: the
+overlay then sets or removes it from the plan.
+
+`GET /config` redacts every `apikey` to an opaque marker. Read never takes
+an `apikey` from the gateway; it comes from prior state or stays null, and
+an apply that would overwrite an `apikey` the plan does not set fails.
+`authorization` is a header scheme, not a secret. If you add a credential
+field, keep it out of `fromAPIConfig` and add it to
+`checkCredentialsManaged`.
+
+Tests drive the provider against `internal/fakegateway`, which follows the
+OpenAPI document and the live gateway's validation. Learn a new shape from
+`POST /aperture/config:validate` on a live gateway, then teach the fake.
 
 ## CI
 
