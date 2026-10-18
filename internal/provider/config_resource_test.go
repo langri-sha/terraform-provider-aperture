@@ -224,3 +224,35 @@ func TestSchema_AuthorizationIsNotSensitive(t *testing.T) {
 		}
 	}
 }
+
+func TestRoundTrip_ProviderAuthModeCompatibilityAndModelCostMap(t *testing.T) {
+	in := `{"providers": {"a": {
+		"baseurl": "https://a.example",
+		"models": ["m"],
+		"auth_mode": "passthrough",
+		"compatibility": {"anthropic_messages": true, "openai_chat": false},
+		"cost_basis": "anthropic",
+		"model_cost_map": [{"match": "x-*", "as": "claude-opus-5", "adjustment": 1.1}, {"match": "y-*", "as": "claude-haiku-5"}]
+	}}}`
+	doc, err := aperture.ParseConfigDocument(in)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	model := fromAPIConfig(doc)
+	out, err := toAPIConfig(&model)
+	if err != nil {
+		t.Fatalf("toAPIConfig: %v", err)
+	}
+
+	p := out.Providers["a"]
+	if p.AuthMode != "passthrough" {
+		t.Errorf("auth_mode = %q", p.AuthMode)
+	}
+	if c := p.Compatibility; c == nil || c.AnthropicMessages == nil || !*c.AnthropicMessages || c.OpenAIChat == nil || *c.OpenAIChat || c.OpenAIResponses != nil {
+		t.Errorf("compatibility = %+v", c)
+	}
+	if len(p.ModelCostMap) != 2 || *p.ModelCostMap[0].Adjustment != 1.1 || p.ModelCostMap[1].Adjustment != nil {
+		t.Errorf("model_cost_map = %+v", p.ModelCostMap)
+	}
+}
