@@ -52,9 +52,9 @@ resource "aperture_config" "main" {
 
   quotas = {
     monthly = {
-      capacity  = 100
-      rate      = 100
-      on_exceed = "block"
+      capacity  = "$100.00"
+      rate      = "$100.00/month"
+      on_exceed = "reject"
     }
   }
 
@@ -132,7 +132,7 @@ Required:
 
 Optional:
 
-- `add_headers` (Map of String, Sensitive)
+- `add_headers` (List of String, Sensitive) Headers added to every upstream request, each as "Header-Name: value".
 - `apikey` (String, Sensitive)
 - `authorization` (String, Sensitive)
 - `cost_basis` (String)
@@ -147,9 +147,9 @@ Optional:
 
 Required:
 
-- `capacity` (Number)
-- `rate` (Number)
+- `capacity` (String) Maximum balance as a dollar amount, e.g. "$10.00".
+- `rate` (String) Refill rate as a dollar amount per period (min, hour, day, week or month), e.g. "$5.00/day".
 
 Optional:
 
-- `on_exceed` (String)
+- `on_exceed` (String) Action when a request would overdraw the bucket. The only supported value is "reject".
