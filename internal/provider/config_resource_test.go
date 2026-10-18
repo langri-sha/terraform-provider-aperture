@@ -60,7 +60,7 @@ func TestToAPIConfig_GrantShape(t *testing.T) {
 	}
 }
 
-func TestToAPIConfig_GrantWithoutRoleOrModelsErrors(t *testing.T) {
+func TestToAPIConfig_GrantCapabilityWithoutRoleOrModelsIsKept(t *testing.T) {
 	m := &configResourceModel{
 		Grants: []grantEntry{
 			{
@@ -69,8 +69,12 @@ func TestToAPIConfig_GrantWithoutRoleOrModelsErrors(t *testing.T) {
 			},
 		},
 	}
-	if _, err := toAPIConfig(m); err == nil {
-		t.Fatal("expected error for empty capability, got nil")
+	c, err := toAPIConfig(m)
+	if err != nil {
+		t.Fatalf("toAPIConfig: %v", err)
+	}
+	if len(c.Grants) != 1 || len(c.Grants[0].App.Aperture) != 1 {
+		t.Errorf("capability dropped: %+v", c.Grants)
 	}
 }
 
