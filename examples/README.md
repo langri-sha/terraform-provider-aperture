@@ -48,7 +48,6 @@ EOF
 terraform import aperture_config.main default
 ```
 
-The post-import Read pulls the entire HuJSON document from the
-gateway and populates state. API keys come back redacted, so
-fill in `apikey = ...` in HCL pointing at your secret store before
-running `terraform plan`.
+The post-import Read pulls the HuJSON document from the gateway and
+populates state, except for API keys, which the gateway redacts. Declare
+an `apikey` in HCL for any provider or hook that has one before applying.

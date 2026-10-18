@@ -13,7 +13,7 @@ terraform {
     }
     aperture = {
       source  = "langri-sha/aperture"
-      version = "~> 0.3"
+      version = "~> 0.4"
     }
   }
 }
