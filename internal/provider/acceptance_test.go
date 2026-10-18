@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -251,6 +252,34 @@ func TestAccConfig_JSONSectionsAreManagedOnlyWhenSet(t *testing.T) {
 				Config:   providerBlock(g) + withDatabase,
 				PlanOnly: true,
 			},
+		},
+	})
+}
+
+func TestAccConfig_ResourceExampleApplies(t *testing.T) {
+	g := fakegateway.New(t, `{"grants": [{"src": ["*"], "app": {"tailscale.com/cap/aperture": [{"role": "admin"}]}}]}`)
+	example, err := os.ReadFile("../../examples/resources/aperture_config/resource.tf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	variables := `
+variable "openai_api_key" {
+  type    = string
+  default = "sk-example"
+}
+
+variable "audit_hook_api_key" {
+  type    = string
+  default = "audit-example"
+}
+`
+	config := providerBlock(g) + variables + string(example)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: protoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: config},
+			{Config: config, PlanOnly: true},
 		},
 	})
 }
