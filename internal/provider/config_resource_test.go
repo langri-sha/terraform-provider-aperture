@@ -1,9 +1,12 @@
 package provider
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/langri-sha/aperture/internal/aperture"
@@ -177,5 +180,21 @@ func TestRoundTrip_ProviderAddHeadersAreHeaderLines(t *testing.T) {
 	got := out.Providers["a"].AddHeaders
 	if len(got) != 2 || got[0] != "X-Team: platform" || got[1] != "X-Env: prod" {
 		t.Errorf("add_headers changed: %v", got)
+	}
+}
+
+func TestSchema_AuthorizationIsNotSensitive(t *testing.T) {
+	var resp resource.SchemaResponse
+	(&configResource{}).Schema(context.Background(), resource.SchemaRequest{}, &resp)
+
+	providers := resp.Schema.Attributes["providers"].(schema.MapNestedAttribute).NestedObject.Attributes
+	hooks := resp.Schema.Attributes["hooks"].(schema.MapNestedAttribute).NestedObject.Attributes
+	for name, attrs := range map[string]map[string]schema.Attribute{"providers": providers, "hooks": hooks} {
+		if attrs["authorization"].IsSensitive() {
+			t.Errorf("%s.authorization is sensitive", name)
+		}
+		if !attrs["apikey"].IsSensitive() {
+			t.Errorf("%s.apikey is not sensitive", name)
+		}
 	}
 }
